@@ -1,11 +1,10 @@
-const fs = require('fs/promises');
 const mongoose = require('mongoose');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/apiError');
 const { Note, User } = require('../models');
 const { listNotes, assertNoteVisible, PUBLIC_NOTES_MATCH } = require('../services/note.service');
 const { assertMember } = require('../services/group.service');
-const { saveNoteFile, getNoteFilePath, removeFile } = require('../services/storage.service');
+const { saveNoteFile, readNoteFile, removeFile } = require('../services/storage.service');
 const { parsePagination } = require('../utils/pagination.util');
 const { containsRegex, exactRegex, splitSearchWords, wordSearchMatch } = require('../utils/regex.util');
 const { NOTE_FILE_TYPES, getExtension, matchesSignature } = require('../utils/fileTypes.util');
@@ -226,14 +225,10 @@ const deleteNote = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Note deleted.' });
 });
 
-const findExistingFile = async (note) => {
-  const filePath = getNoteFilePath(note.fileUrl);
-  try {
-    await fs.access(filePath);
-  } catch (error) {
-    throw new ApiError(404, 'File not found.');
-  }
-  return filePath;
+const readExistingFile = async (note) => {
+  const buffer = await readNoteFile(note.fileUrl);
+  if (!buffer) throw new ApiError(404, 'File not found.');
+  return buffer;
 };
 
 // Sayfa içi önizleme (sadece PDF ve görseller). İndirme sayacını artırmaz.
@@ -245,23 +240,24 @@ const previewNote = asyncHandler(async (req, res) => {
   const contentType = PREVIEW_CONTENT_TYPES[getExtension(note.fileUrl)];
   if (!contentType) throw new ApiError(415, 'Preview is not supported for this file type.');
 
-  const filePath = await findExistingFile(note);
+  const buffer = await readExistingFile(note);
   res.set('Content-Type', contentType);
   res.set('Cache-Control', 'private, max-age=300');
-  res.sendFile(filePath);
+  res.send(buffer);
 });
 
 // Kredi/puan sistemi yok: doğrulanmış her kullanıcı sınırsız indirebilir.
 const downloadNote = asyncHandler(async (req, res) => {
   const note = await findNoteOrFail(req.params.id, '+fileUrl');
   await assertNoteVisible(note, req.user.id);
-  const filePath = await findExistingFile(note);
+  const buffer = await readExistingFile(note);
 
   await Note.updateOne({ _id: note._id }, { $inc: { downloadsCount: 1 } });
 
   // Frontend'in Content-Disposition'daki dosya adını okuyabilmesi için.
   res.set('Access-Control-Expose-Headers', 'Content-Disposition');
-  res.download(filePath, note.originalName);
+  res.attachment(note.originalName);
+  res.send(buffer);
 });
 
 const likeNote = asyncHandler(async (req, res) => {

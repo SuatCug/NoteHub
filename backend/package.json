@@ -7,7 +7,8 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "seed": "node scripts/seed.js",
-    "seed:clear": "node scripts/seed.js --clear"
+    "seed:clear": "node scripts/seed.js --clear",
+    "migrate:cloudinary": "node scripts/migrateToCloudinary.js"
   },
   "keywords": [],
   "author": "",
@@ -15,6 +16,7 @@
   "type": "commonjs",
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
     "cors": "^2.8.6",
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
