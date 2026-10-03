@@ -1,0 +1,41 @@
+require('dotenv').config();
+const path = require('path');
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+
+const connectDB = require('./config/db');
+const routes = require('./routes');
+const { notFound, errorHandler } = require('./middlewares/error.middleware');
+
+const app = express();
+
+// Avatarlar frontend'den (farklı origin) <img> ile yüklenebilsin diye CORP gevşetiliyor.
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+app.use(cors({ origin: process.env.CLIENT_URL?.split(',') || '*' }));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+if (process.env.NODE_ENV !== 'test') {
+  app.use(morgan('dev'));
+}
+
+// Sadece avatarlar herkese açık servis edilir; not dosyaları yalnızca /api/notes/:id/download ile indirilir.
+app.use('/uploads/avatars', express.static(path.join(__dirname, 'uploads', 'avatars')));
+
+app.get('/', (req, res) => {
+  res.json({ success: true, message: 'NoteHub API is running.' });
+});
+
+app.use('/api', routes);
+
+app.use(notFound);
+app.use(errorHandler);
+
+const PORT = process.env.PORT || 5000;
+
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🚀 API running at http://localhost:${PORT}`);
+  });
+});

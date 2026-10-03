@@ -1,0 +1,37 @@
+import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
+import { logout } from '@/app/authSlice';
+
+export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl: API_URL,
+  prepareHeaders: (headers, { getState }) => {
+    const token = getState().auth.token;
+    if (token) headers.set('Authorization', `Bearer ${token}`);
+    return headers;
+  },
+});
+
+// Oturum açıkken 401 dönerse token süresi dolmuş demektir: kullanıcıyı çıkış yaptır.
+const baseQuery = async (args, api, extraOptions) => {
+  const result = await rawBaseQuery(args, api, extraOptions);
+  if (result.error?.status === 401 && api.getState().auth.token) {
+    api.dispatch(logout());
+  }
+  return result;
+};
+
+const TAG_TYPES = ['Me', 'Note', 'NoteList', 'Filters', 'User', 'FollowList', 'Group', 'GroupList', 'GroupMembers', 'GroupRequests', 'GroupMessages', 'Conversations', 'Conversation', 'Unread'];
+
+// Oturum açılıp kapandığında kullanıcıya özel alanlar (isLiked, isFollowing, isOwner) değişir;
+// bu etiketler geçersiz kılınarak açık sayfalar yeni oturumla tekrar çekilir.
+export const SESSION_TAGS = TAG_TYPES.filter((t) => t !== 'Filters');
+
+// Tüm endpoint'ler tek bir API üzerinde toplanır (authApi / notesApi / usersApi / groupsApi injectEndpoints ile ekler);
+// böylece örn. bir not beğenildiğinde profil istatistikleri de aynı cache üzerinden yenilenir.
+export const baseApi = createApi({
+  reducerPath: 'api',
+  baseQuery,
+  tagTypes: TAG_TYPES,
+  endpoints: () => ({}),
+});

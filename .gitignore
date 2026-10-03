@@ -1,0 +1,31 @@
+# Ortam değişkenleri (gizli bilgiler) — ASLA commit'lenmez
+.env
+.env.*
+*.env
+!.env.example
+
+# Bağımlılıklar
+node_modules/
+
+# Build çıktıları
+dist/
+build/
+*.local
+
+# Kullanıcıların yüklediği dosyalar (klasör yapısı .gitkeep ile korunur)
+backend/uploads/**
+!backend/uploads/*/
+!backend/uploads/*/.gitkeep
+
+# Loglar
+logs/
+*.log
+npm-debug.log*
+
+# Editör / işletim sistemi
+.vscode/
+.idea/
+.claude/
+.DS_Store
+Thumbs.db
+desktop.ini

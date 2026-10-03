@@ -1,0 +1,218 @@
+const bcrypt = require('bcryptjs');
+const mongoose = require('mongoose');
+const asyncHandler = require('../utils/asyncHandler');
+const ApiError = require('../utils/apiError');
+const { User, Note } = require('../models');
+const { listNotes, PUBLIC_NOTES_MATCH } = require('../services/note.service');
+const { saveAvatar, removeFile } = require('../services/storage.service');
+const { parsePagination, buildPagination } = require('../utils/pagination.util');
+const { wordSearchMatch } = require('../utils/regex.util');
+const { getExtension, matchesSignature } = require('../utils/fileTypes.util');
+const { isBlockedBetween } = require('../services/block.service');
+
+const USER_CARD_FIELDS = 'fullName avatarUrl university department';
+
+// Kişi arama: ad, üniversite veya bölümde (Türkçe karakter duyarsız) eşleşen kullanıcılar,
+// en çok takipçisi olandan başlayarak sıralanır.
+const searchUsers = asyncHandler(async (req, res) => {
+  const { page, limit, skip } = parsePagination(req.query);
+  // Kelime bazlı: "elif odtü" -> adında "elif", üniversitesinde "ODTÜ" geçen kişi.
+  const qMatch = wordSearchMatch(req.query.q, ['fullName', 'university', 'department']);
+  if (!qMatch) {
+    return res.json({ success: true, data: { users: [], pagination: buildPagination(page, limit, 0) } });
+  }
+  // Arayanı engellemiş kullanıcılar sonuçlarda çıkmaz.
+  const match = req.user
+    ? { $and: [qMatch, { blockedUsers: { $ne: new mongoose.Types.ObjectId(req.user.id) } }] }
+    : qMatch;
+
+  const [users, total] = await Promise.all([
+    User.aggregate([
+      { $match: match },
+      { $addFields: { followersCount: { $size: '$followers' } } },
+      { $sort: { followersCount: -1, fullName: 1 } },
+      { $skip: skip },
+      { $limit: limit },
+      { $project: { fullName: 1, avatarUrl: 1, university: 1, department: 1, followersCount: 1 } },
+    ]),
+    User.countDocuments(match),
+  ]);
+
+  res.json({ success: true, data: { users, pagination: buildPagination(page, limit, total) } });
+});
+
+// Profil sayfası: kullanıcı bilgisi + not sayısı + toplam beğeni/indirme + (giriş yapılmışsa) takip durumu.
+const getProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id);
+  if (!user) throw new ApiError(404, 'User not found.');
+
+  const [stats] = await Note.aggregate([
+    // Profil istatistikleri sadece genel notlardan hesaplanır (grup notları profilde görünmez).
+    { $match: { author: user._id, ...PUBLIC_NOTES_MATCH } },
+    {
+      $group: {
+        _id: null,
+        notesCount: { $sum: 1 },
+        totalLikes: { $sum: { $size: '$likes' } },
+        totalDownloads: { $sum: '$downloadsCount' },
+      },
+    },
+  ]);
+
+  const isFollowing = req.user ? user.followers.some((id) => id.equals(req.user.id)) : false;
+  const isBlocked = req.user
+    ? Boolean(await User.exists({ _id: req.user.id, blockedUsers: user._id }))
+    : false;
+
+  res.json({
+    success: true,
+    data: {
+      user: user.toPublicJSON(),
+      stats: {
+        notesCount: stats?.notesCount || 0,
+        totalLikes: stats?.totalLikes || 0,
+        totalDownloads: stats?.totalDownloads || 0,
+      },
+      isFollowing,
+      // Giriş yapan kullanıcı bu kişiyi engellediyse true.
+      isBlocked,
+      isMe: req.user?.id === user._id.toString(),
+    },
+  });
+});
+
+const getUserNotes = asyncHandler(async (req, res) => {
+  const exists = await User.exists({ _id: req.params.id });
+  if (!exists) throw new ApiError(404, 'User not found.');
+
+  // q: kullanıcının notları içinde başlık / ders adı / ders kodu / hoca adında arama.
+  const author = { author: new mongoose.Types.ObjectId(req.params.id) };
+  const qMatch = wordSearchMatch(req.query.q, ['title', 'courseName', 'courseCode', 'instructorName']);
+  const match = qMatch ? { $and: [author, qMatch] } : author;
+
+  const data = await listNotes({
+    match,
+    sort: req.query.sort,
+    ...parsePagination(req.query),
+    viewerId: req.user?.id,
+  });
+
+  res.json({ success: true, data });
+});
+
+const getFollowers = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).populate('followers', USER_CARD_FIELDS);
+  if (!user) throw new ApiError(404, 'User not found.');
+  res.json({ success: true, data: { users: user.followers } });
+});
+
+const getFollowing = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.params.id).populate('following', USER_CARD_FIELDS);
+  if (!user) throw new ApiError(404, 'User not found.');
+  res.json({ success: true, data: { users: user.following } });
+});
+
+const follow = asyncHandler(async (req, res) => {
+  const targetId = req.params.id;
+  if (targetId === req.user.id) throw new ApiError(400, 'You cannot follow yourself.');
+  if (await isBlockedBetween(req.user.id, targetId)) throw new ApiError(403, 'You cannot follow this user.');
+
+  const target = await User.findByIdAndUpdate(targetId, { $addToSet: { followers: req.user.id } }, { returnDocument: 'after' });
+  if (!target) throw new ApiError(404, 'User not found.');
+  await User.updateOne({ _id: req.user.id }, { $addToSet: { following: targetId } });
+
+  res.json({
+    success: true,
+    message: 'User followed.',
+    data: { isFollowing: true, followersCount: target.followers.length },
+  });
+});
+
+const unfollow = asyncHandler(async (req, res) => {
+  const targetId = req.params.id;
+
+  const target = await User.findByIdAndUpdate(targetId, { $pull: { followers: req.user.id } }, { returnDocument: 'after' });
+  if (!target) throw new ApiError(404, 'User not found.');
+  await User.updateOne({ _id: req.user.id }, { $pull: { following: targetId } });
+
+  res.json({
+    success: true,
+    message: 'User unfollowed.',
+    data: { isFollowing: false, followersCount: target.followers.length },
+  });
+});
+
+// Engelleme: iki taraf da birbirine mesaj atamaz ve takip edemez; varsa karşılıklı takip kaldırılır.
+const block = asyncHandler(async (req, res) => {
+  const me = req.user.id;
+  const targetId = req.params.id;
+  if (targetId === me) throw new ApiError(400, 'You cannot block yourself.');
+  if (!(await User.exists({ _id: targetId }))) throw new ApiError(404, 'User not found.');
+
+  await Promise.all([
+    User.updateOne({ _id: me }, { $addToSet: { blockedUsers: targetId }, $pull: { following: targetId, followers: targetId } }),
+    User.updateOne({ _id: targetId }, { $pull: { following: me, followers: me } }),
+  ]);
+
+  res.json({ success: true, message: 'User blocked.', data: { isBlocked: true } });
+});
+
+const unblock = asyncHandler(async (req, res) => {
+  await User.updateOne({ _id: req.user.id }, { $pull: { blockedUsers: req.params.id } });
+  res.json({ success: true, message: 'User unblocked.', data: { isBlocked: false } });
+});
+
+const updateProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
+  ['fullName', 'university', 'department', 'bio'].forEach((field) => {
+    if (req.body[field] !== undefined) user[field] = req.body[field];
+  });
+  await user.save();
+
+  res.json({ success: true, message: 'Profile updated.', data: { user: user.toSafeJSON() } });
+});
+
+const updateAvatar = asyncHandler(async (req, res) => {
+  if (!req.file) throw new ApiError(400, 'A profile photo (avatar) is required.');
+
+  const ext = getExtension(req.file.originalname);
+  if (!matchesSignature(req.file.buffer, ext)) {
+    throw new ApiError(415, 'The file content does not match its extension.');
+  }
+
+  const user = await User.findById(req.user.id);
+  const oldAvatar = user.avatarUrl;
+  user.avatarUrl = await saveAvatar(req.file.buffer, ext);
+  await user.save();
+  await removeFile(oldAvatar);
+
+  res.json({ success: true, message: 'Profile photo updated.', data: { user: user.toSafeJSON() } });
+});
+
+const changePassword = asyncHandler(async (req, res) => {
+  const { currentPassword, newPassword } = req.body;
+
+  const user = await User.findById(req.user.id).select('+passwordHash');
+  const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!isMatch) throw new ApiError(401, 'Current password is incorrect.');
+
+  user.passwordHash = await bcrypt.hash(newPassword, 10);
+  await user.save();
+
+  res.json({ success: true, message: 'Password updated.' });
+});
+
+module.exports = {
+  searchUsers,
+  getProfile,
+  getUserNotes,
+  getFollowers,
+  getFollowing,
+  follow,
+  unfollow,
+  block,
+  unblock,
+  updateProfile,
+  updateAvatar,
+  changePassword,
+};

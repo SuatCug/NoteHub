@@ -1,0 +1,13 @@
+import { useEffect, useState } from 'react';
+
+// Kullanıcı yazarken her tuşta istek atmamak için değeri kısa bir gecikmeyle uygular.
+export function useDebounce(value, delay = 300) {
+  const [debounced, setDebounced] = useState(value);
+
+  useEffect(() => {
+    const handle = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(handle);
+  }, [value, delay]);
+
+  return debounced;
+}

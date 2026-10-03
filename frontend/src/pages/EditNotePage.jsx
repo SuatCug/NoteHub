@@ -1,0 +1,57 @@
+import { useState } from 'react';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
+import PageLayout from '@/components/layout/PageLayout';
+import NoteForm from '@/components/notes/NoteForm';
+import Spinner from '@/components/common/Spinner';
+import EmptyState from '@/components/common/EmptyState';
+import { useGetNoteQuery, useUpdateNoteMutation } from '@/services/notesApi';
+import { getErrorMessage } from '@/lib/getErrorMessage';
+
+const EDITABLE = ['title', 'description', 'courseName', 'courseCode', 'instructorName', 'semester', 'university', 'department'];
+
+export default function EditNotePage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { data, isLoading, error: loadError } = useGetNoteQuery(id);
+  const [updateNote, { isLoading: saving }] = useUpdateNoteMutation();
+  const [error, setError] = useState('');
+
+  if (isLoading) return <PageLayout><Spinner /></PageLayout>;
+  if (loadError) {
+    return (
+      <PageLayout narrow>
+        <EmptyState title="Note not found" action={<Link to="/" className="btn-primary">Back to notes</Link>} />
+      </PageLayout>
+    );
+  }
+
+  const note = data.data.note;
+  if (!note.isOwner) return <Navigate to={`/notes/${id}`} replace />;
+
+  const handleSubmit = async (values) => {
+    setError('');
+    try {
+      await updateNote({ id, ...values }).unwrap();
+      navigate(`/notes/${id}`);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    }
+  };
+
+  return (
+    <PageLayout narrow>
+      <h1 className="text-2xl font-bold text-gray-900">Edit Note</h1>
+      <p className="text-sm text-gray-500 mt-1">The file can't be changed; upload a new note to share a different file.</p>
+      <div className="card p-5 sm:p-7 mt-6">
+        <NoteForm
+          initialValues={Object.fromEntries(EDITABLE.map((k) => [k, note[k] ?? '']))}
+          withFile={false}
+          onSubmit={handleSubmit}
+          isLoading={saving}
+          submitLabel="Save Changes"
+          error={error}
+        />
+      </div>
+    </PageLayout>
+  );
+}

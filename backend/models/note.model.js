@@ -1,0 +1,44 @@
+const mongoose = require('mongoose');
+
+const commentSchema = new mongoose.Schema(
+  {
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    text: { type: String, required: true, trim: true, maxlength: 1000 },
+  },
+  { timestamps: { createdAt: true, updatedAt: false } }
+);
+
+const noteSchema = new mongoose.Schema(
+  {
+    author: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    title: { type: String, required: true, trim: true },
+    description: { type: String, default: '', trim: true },
+    university: { type: String, required: true, trim: true, index: true },
+    department: { type: String, required: true, trim: true, index: true },
+    // Örn: CENG101 — "ceng 101" gibi girişler aramada tutarlılık için boşluksuz büyük harfe çevrilir.
+    courseCode: {
+      type: String,
+      index: true,
+      set: (v) => (typeof v === 'string' ? v.replace(/\s+/g, '').toUpperCase() : v),
+    },
+    courseName: { type: String, required: true, trim: true }, // Örn: Computer Programming I
+    instructorName: { type: String, trim: true }, // Örn: Prof. Dr. Ahmet Yılmaz
+    semester: { type: String, trim: true }, // Örn: 2023-2024 Güz
+    // Not bir gruba paylaşıldıysa (opsiyonel). Grup notları da herkese açıktır; grup sayfasında listelenir.
+    group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', index: true },
+    // Depolama katmanındaki konum (services/storage.service.js). İstemciye gönderilmez;
+    // dosyaya sadece /api/notes/:id/download üzerinden erişilir.
+    fileUrl: { type: String, required: true, select: false },
+    originalName: { type: String, required: true }, // İndirmede kullanılacak dosya adı
+    fileType: { type: String, required: true, enum: ['pdf', 'docx', 'image', 'archive'] },
+    fileSize: { type: Number, required: true }, // byte cinsinden
+    likes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    comments: [commentSchema], // Gömülü (embedded) yorumlar
+    downloadsCount: { type: Number, default: 0 },
+  },
+  { timestamps: true }
+);
+
+noteSchema.index({ createdAt: -1 });
+
+module.exports = mongoose.model('Note', noteSchema);

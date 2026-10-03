@@ -1,0 +1,32 @@
+{
+  "name": "notehub-backend",
+  "version": "1.0.0",
+  "description": "NoteHub - Not Paylaşım Platformu Backend API (Express + MongoDB)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "seed": "node scripts/seed.js",
+    "seed:clear": "node scripts/seed.js --clear"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "express-validator": "^7.3.2",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.10.3",
+    "morgan": "^1.12.1",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.12"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
