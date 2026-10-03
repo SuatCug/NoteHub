@@ -8,7 +8,7 @@ const FAQ = [
   {
     category: 'Getting started',
     items: [
-      ['Is NoteHub really free?', 'Yes. Browsing, previewing, downloading and sharing notes is completely free. There are no credits, subscriptions or download limits.'],
+      ['Is SearchNote really free?', 'Yes. Browsing, previewing, downloading and sharing notes is completely free. There are no credits, subscriptions or download limits.'],
       ['Do I need an account?', 'You can browse and search notes without an account. To preview, download, like, comment, follow students or join groups, you need to log in.'],
       ['How do I change my profile?', 'Open the account menu in the top right corner and choose "Account Settings". There you can update your name, university, department, bio, profile photo and password.'],
     ],
@@ -45,7 +45,7 @@ export default function HelpPage() {
       <PageHeader
         eyebrow="Help Center"
         title="How can we help?"
-        text="Answers to the most common questions about using NoteHub. Can't find what you're looking for? Our team is happy to help."
+        text="Answers to the most common questions about using SearchNote. Can't find what you're looking for? Our team is happy to help."
       />
 
       <div className="mt-10 grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)] items-start">

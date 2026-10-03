@@ -6,7 +6,7 @@ import { formatCount } from '@/lib/format';
 export default function GroupCard({ group, index = 0 }) {
   return (
     <article
-      className="card card-enter relative flex flex-col p-5 hover:shadow-md hover:border-navy-100 transition-all"
+      className="card card-enter relative flex flex-col min-w-0 p-5 hover:shadow-md hover:border-navy-100 transition-all"
       style={{ animationDelay: `${Math.min(index, 12) * 60}ms` }}
     >
       <div className="flex items-start justify-between gap-3">

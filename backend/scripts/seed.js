@@ -161,7 +161,7 @@ const escapePdf = (s) => toAscii(s).replace(/[\\()]/g, (c) => `\\${c}`);
 const buildPdf = ({ title, subtitle, lines }) => {
   const ops = ['BT', '/F1 22 Tf', '60 770 Td', `(${escapePdf(title)}) Tj`, '/F1 12 Tf', '0 -26 Td', `(${escapePdf(subtitle)}) Tj`, '/F1 13 Tf'];
   lines.forEach((line, i) => ops.push(`0 ${i === 0 ? -44 : -26} Td`, `(${i + 1}. ${escapePdf(line)}) Tj`));
-  ops.push('/F1 10 Tf', `0 -${60 + 0} Td`, '(Shared on NoteHub - sample note) Tj', 'ET');
+  ops.push('/F1 10 Tf', `0 -${60 + 0} Td`, '(Shared on SearchNote - sample note) Tj', 'ET');
   const content = ops.join('\n');
 
   const objects = [

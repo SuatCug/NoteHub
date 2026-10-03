@@ -46,7 +46,7 @@ export default function HowItWorksPage() {
       <PageHeader
         eyebrow="How it works"
         title="Everything you need to study smarter."
-        text="Finding, sharing and discussing study materials on NoteHub is simple. Here's how to get the most out of it."
+        text="Finding, sharing and discussing study materials on SearchNote is simple. Here's how to get the most out of it."
       >
         <Link to={token ? '/upload' : '/register'} className="btn-primary bg-white text-navy-700 hover:bg-navy-50">
           {token ? 'Upload a note' : 'Get started — it’s free'}

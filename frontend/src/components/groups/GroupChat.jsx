@@ -101,7 +101,7 @@ export default function GroupChat({ groupId, isOwner }) {
                       <button
                         type="button"
                         onClick={() => handleDelete(m._id)}
-                        className="p-1 rounded text-gray-300 opacity-0 group-hover:opacity-100 focus:opacity-100 hover:text-rose-500"
+                        className="p-1 rounded text-gray-300 opacity-0 group-hover:opacity-100 focus:opacity-100 pointer-coarse:opacity-100 hover:text-rose-500"
                         aria-label="Delete message"
                       >
                         <Trash2 size={14} />

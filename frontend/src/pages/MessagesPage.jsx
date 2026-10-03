@@ -20,7 +20,12 @@ export default function MessagesPage() {
     <PageLayout>
       <h1 className={`text-2xl font-bold text-gray-900 mb-5 ${id ? 'hidden lg:block' : ''}`}>Messages</h1>
 
-      <div className="card overflow-hidden grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)] h-[calc(100vh-12rem)] min-h-[480px]">
+      {/* Yükseklik ekrana sığacak şekilde hesaplanır; telefonda üst arama satırı ve alt sekme çubuğu da düşülür. */}
+      <div
+        className={`card overflow-hidden grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[320px_minmax(0,1fr)] min-h-[360px] md:h-[calc(100dvh-12rem)] md:min-h-[480px] ${
+          id ? 'h-[calc(100dvh-14rem)]' : 'h-[calc(100dvh-17rem)]'
+        }`}
+      >
         <aside className={`min-h-0 lg:border-r border-gray-100 ${id ? 'hidden lg:block' : ''}`}>
           <ConversationList conversations={data?.data?.conversations} isLoading={isLoading} error={error} />
         </aside>

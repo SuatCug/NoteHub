@@ -44,9 +44,9 @@ export default function AboutPage() {
   return (
     <PageLayout>
       <PageHeader
-        eyebrow="About NoteHub"
+        eyebrow="About SearchNote"
         title="By students, for students."
-        text="NoteHub started with a simple idea: the best study materials are often sitting in a classmate's notebook. We built a place where university students can share class notes, slides and past exams — and find exactly what they need, for free."
+        text="SearchNote started with a simple idea: the best study materials are often sitting in a classmate's notebook. We built a place where university students can share class notes, slides and past exams — and find exactly what they need, for free."
       >
         <Link to="/" className="btn-primary bg-white text-navy-700 hover:bg-navy-50">
           Browse notes
@@ -75,7 +75,7 @@ export default function AboutPage() {
         <p className="mt-3 mx-auto text-[15px] leading-relaxed text-gray-600 max-w-3xl">
           Every semester, thousands of students rewrite the same summaries and search for the same past exams. We want
           to make that effort count twice: once for the student who prepares a great note, and again for everyone who
-          learns from it. NoteHub organizes materials by university, department, course and instructor so the right
+          learns from it. SearchNote organizes materials by university, department, course and instructor so the right
           note is always one search away.
         </p>
       </section>
@@ -102,7 +102,7 @@ export default function AboutPage() {
         <div className="flex-1">
           <h2 className="text-lg font-semibold text-gray-900">Have an idea or found a problem?</h2>
           <p className="mt-1 text-sm text-gray-600">
-            NoteHub is shaped by its community. We read every message and use your feedback to decide what to build next.
+            SearchNote is shaped by its community. We read every message and use your feedback to decide what to build next.
           </p>
         </div>
         <Link to="/contact" className="btn-primary shrink-0">

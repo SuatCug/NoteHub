@@ -18,6 +18,11 @@
   --color-navy-950: #141f36;
 }
 
+/* Telefonlarda alttaki sekme çubuğu + iPhone ana ekran çizgisi kadar boşluk. */
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 body {
   @apply bg-gray-100 text-gray-900 font-sans antialiased;
 }
@@ -32,6 +37,21 @@ button:not(:disabled),
 button:disabled,
 [role='button'][aria-disabled='true'] {
   cursor: not-allowed;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* iOS Safari 16px'ten küçük yazılı alanlara odaklanınca sayfayı yakınlaştırıyor; telefonda alanlar 16px tutulur.
+   Katmansız (unlayered) kural olduğu için Tailwind'in text-* yardımcılarını ezer. */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
 
 /* Form alanları için ortak görünüm (input, select, textarea). */

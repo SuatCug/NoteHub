@@ -21,12 +21,12 @@ const sendVerificationEmail = async (user, token) => {
   }
 
   await transporter.sendMail({
-    from: process.env.MAIL_FROM || 'NoteHub <no-reply@notehub.app>',
+    from: process.env.MAIL_FROM || 'SearchNote <no-reply@searchnote.app>',
     to: user.email,
-    subject: 'NoteHub - Verify your email address',
-    text: `Hi ${user.fullName},\n\nClick the link below to verify your NoteHub account:\n${link}\n\nThe link is valid for 24 hours.`,
+    subject: 'SearchNote - Verify your email address',
+    text: `Hi ${user.fullName},\n\nClick the link below to verify your SearchNote account:\n${link}\n\nThe link is valid for 24 hours.`,
     html: `<p>Hi ${user.fullName},</p>
-      <p>Click the link below to verify your NoteHub account:</p>
+      <p>Click the link below to verify your SearchNote account:</p>
       <p><a href="${link}">Verify my email address</a></p>
       <p>The link is valid for 24 hours.</p>`,
   });

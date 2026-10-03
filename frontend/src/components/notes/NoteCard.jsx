@@ -7,7 +7,7 @@ import { formatCount, timeAgo } from '@/lib/format';
 export default function NoteCard({ note, index = 0 }) {
   return (
     <article
-      className="card card-enter relative flex flex-col p-5 hover:shadow-md hover:border-navy-100 transition-all"
+      className="card card-enter relative flex flex-col min-w-0 p-5 hover:shadow-md hover:border-navy-100 transition-all"
       style={{ animationDelay: `${Math.min(index, 12) * 60}ms` }}
     >
       <div className="flex items-center justify-between gap-2">
@@ -19,7 +19,7 @@ export default function NoteCard({ note, index = 0 }) {
         )}
       </div>
 
-      <h3 className="mt-3 text-base font-semibold text-gray-900 leading-snug line-clamp-2">
+      <h3 className="mt-3 text-base font-semibold text-gray-900 leading-snug line-clamp-2 break-words">
         {/* Kartın tamamını tıklanabilir yapan bağlantı */}
         <Link to={`/notes/${note._id}`} className="after:absolute after:inset-0 after:rounded-xl">
           {note.title}

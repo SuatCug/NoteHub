@@ -146,7 +146,7 @@ export default function Footer() {
 
         <div className="py-7 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-5">
           <p className="text-sm text-white/60 text-center sm:text-left">
-            © {YEAR} NoteHub. All rights reserved. Made with care for students in Türkiye.
+            © {YEAR} SearchNote. All rights reserved. Made with care for students in Türkiye.
           </p>
           <button
             type="button"

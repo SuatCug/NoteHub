@@ -58,7 +58,7 @@ export default function CommentSection({ note }) {
               <button
                 type="button"
                 onClick={() => handleDelete(comment._id)}
-                className="p-1 rounded text-gray-300 hover:text-rose-500 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                className="p-1 rounded text-gray-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 focus:opacity-100 pointer-coarse:opacity-100 transition-opacity"
                 aria-label="Delete comment"
               >
                 <Trash2 size={14} />

@@ -5,9 +5,7 @@ import { MessageCircle, Search, Upload, Users } from 'lucide-react';
 import Logo from './Logo';
 import AvatarMenu from './AvatarMenu';
 import { useGetUnreadCountQuery } from '@/services/messagesApi';
-
-// Okunmamış mesaj rozeti bu aralıkla yenilenir (sekme arka plandayken durur).
-const UNREAD_POLL_INTERVAL_MS = 30000;
+import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
 
 function SearchInput({ value, onChange, placeholder }) {
   return (
@@ -67,11 +65,12 @@ export default function Navbar() {
         </form>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+          {/* Giriş yapmış kullanıcıda telefonda bu bağlantılar alttaki sekme çubuğundadır (MobileTabBar). */}
           <Link
             to="/groups"
             title="Groups"
             aria-label="Groups"
-            className="inline-flex items-center gap-1.5 rounded-lg px-2 sm:px-3 py-2 text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-colors"
+            className={`${token ? 'hidden md:inline-flex' : 'hidden sm:inline-flex'} items-center gap-1.5 rounded-lg px-2 sm:px-3 py-2 text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-colors`}
           >
             <Users size={17} />
             <span className="hidden xl:inline">Groups</span>
@@ -83,7 +82,7 @@ export default function Navbar() {
                 to="/upload"
                 title="Upload Note"
                 aria-label="Upload Note"
-                className="inline-flex items-center gap-2 rounded-lg bg-white px-3 lg:px-4 py-2 text-sm font-semibold text-navy-900 shadow-sm hover:bg-navy-50 transition-colors"
+                className="hidden md:inline-flex items-center gap-2 rounded-lg bg-white px-3 lg:px-4 py-2 text-sm font-semibold text-navy-900 shadow-sm hover:bg-navy-50 transition-colors"
               >
                 <Upload size={16} />
                 <span className="hidden lg:inline">Upload Note</span>
@@ -97,7 +96,7 @@ export default function Navbar() {
               </Link>
               <Link
                 to="/register"
-                className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-navy-900 shadow-sm hover:bg-navy-50 transition-colors"
+                className="rounded-lg bg-white px-3 sm:px-4 py-2 text-sm font-semibold text-navy-900 shadow-sm hover:bg-navy-50 transition-colors whitespace-nowrap"
               >
                 Sign Up
               </Link>
@@ -106,10 +105,13 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* Dar ekranlarda (md altı) arama kutusu ikinci satırda */}
-      <form onSubmit={handleSubmit} className="md:hidden px-4 sm:px-6 pb-3" role="search">
-        <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search notes or people..." />
-      </form>
+      {/* Dar ekranlarda (md altı) arama kutusu ikinci satırda. Ziyaretçi ana sayfasında karşılama alanının
+          kendi büyük arama kutusu olduğu için burada tekrar gösterilmez. */}
+      {!(!token && location.pathname === '/' && !searchParams.toString()) && (
+        <form onSubmit={handleSubmit} className="md:hidden px-4 sm:px-6 pb-3" role="search">
+          <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search notes or people..." />
+        </form>
+      )}
     </header>
   );
 }
@@ -124,7 +126,7 @@ function MessagesLink() {
   return (
     <Link
       to="/messages"
-      className="relative inline-flex items-center gap-1.5 rounded-lg px-2 sm:px-3 py-2 text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-colors"
+      className="relative hidden md:inline-flex items-center gap-1.5 rounded-lg px-2 sm:px-3 py-2 text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-colors"
       title="Messages"
       aria-label={count ? `Messages, ${count} unread` : 'Messages'}
     >

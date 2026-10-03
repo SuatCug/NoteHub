@@ -31,7 +31,7 @@ export default function GuidelinesPage() {
       <PageHeader
         eyebrow="Community Guidelines"
         title="A helpful, respectful place to learn."
-        text="NoteHub works because students trust each other's work. These guidelines keep the community useful and safe for everyone."
+        text="SearchNote works because students trust each other's work. These guidelines keep the community useful and safe for everyone."
       />
 
       <div className="mt-10 grid gap-5 md:grid-cols-2">

@@ -1,7 +1,7 @@
 {
-  "name": "notehub-backend",
+  "name": "searchnote-backend",
   "version": "1.0.0",
-  "description": "NoteHub - Not Paylaşım Platformu Backend API (Express + MongoDB)",
+  "description": "SearchNote - Not Paylaşım Platformu Backend API (Express + MongoDB)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

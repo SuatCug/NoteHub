@@ -24,7 +24,7 @@ export const SOCIAL_LINKS = {
   discord: '', // örn. https://discord.gg/xxxx
   telegram: '', // örn. https://t.me/xxxx
   instagram: '', // örn. https://instagram.com/xxxx
-  contactEmail: '', // örn. iletisim@notehub.app
+  contactEmail: '', // örn. iletisim@searchnote.app
 };
 
 export const EDU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.edu\.tr$/;
@@ -32,3 +32,6 @@ export const EDU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.edu\.tr$/;
 // Backend'deki REQUIRE_EDU_EMAIL ile aynı tutulmalı (frontend/.env: VITE_REQUIRE_EDU_EMAIL=true).
 export const REQUIRE_EDU_EMAIL = import.meta.env.VITE_REQUIRE_EDU_EMAIL === 'true';
 export const EMAIL_PLACEHOLDER = REQUIRE_EDU_EMAIL ? 'ad.soyad@universite.edu.tr' : 'ornek@eposta.com';
+
+// Okunmamış mesaj rozeti bu aralıkla yenilenir (sekme arka plandayken durur).
+export const UNREAD_POLL_INTERVAL_MS = 30000;

@@ -29,7 +29,7 @@ if (process.env.NODE_ENV !== 'test') {
 app.use('/uploads/avatars', express.static(path.join(__dirname, 'uploads', 'avatars')));
 
 app.get('/', (req, res) => {
-  res.json({ success: true, message: 'NoteHub API is running.' });
+  res.json({ success: true, message: 'SearchNote API is running.' });
 });
 
 app.use('/api', routes);

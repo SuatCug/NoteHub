@@ -23,9 +23,9 @@ export default function AuthLayout({ children }) {
         </div>
         <div>
           <h2 className="text-4xl font-bold leading-tight">
-            Share your class notes,
+            Search any note,
             <br />
-            learn together.
+            share your own.
           </h2>
           <ul className="mt-8 space-y-4">
             {FEATURES.map(({ icon: Icon, text }) => (

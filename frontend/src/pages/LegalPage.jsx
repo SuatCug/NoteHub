@@ -10,11 +10,11 @@ const LEGAL_DOCUMENTS = {
   terms: {
     title: 'Terms of Use',
     sections: [
-      ['Using NoteHub', 'NoteHub lets university students share and download study materials for free. By creating an account you agree to use the platform for educational purposes only.'],
+      ['Using SearchNote', 'SearchNote lets university students share and download study materials for free. By creating an account you agree to use the platform for educational purposes only.'],
       ['Your content', 'You are responsible for everything you upload. Only share materials you created yourself or have the right to share. Do not upload exam answers that your instructor has asked to keep private, personal data of others, or harmful files.'],
       ['Study groups', 'Notes and messages shared in a group are visible only to its members. Group founders are responsible for moderating their groups and may remove members.'],
       ['Community rules', 'Be respectful in comments and group chats. Spam, harassment and hate speech are not allowed. We may remove content or suspend accounts that break our Community Guidelines.'],
-      ['No warranty', 'Notes are shared by students and may contain mistakes. NoteHub does not guarantee the accuracy of any material.'],
+      ['No warranty', 'Notes are shared by students and may contain mistakes. SearchNote does not guarantee the accuracy of any material.'],
     ],
   },
   privacy: {
@@ -46,8 +46,8 @@ const LEGAL_DOCUMENTS = {
   cookies: {
     title: 'Cookie Policy',
     sections: [
-      ['Our approach', 'NoteHub does not use advertising or third-party tracking cookies.'],
-      ['What we store', 'To keep you signed in, your session token and basic profile information are stored in your browser’s local storage. This data never leaves your device except to authenticate your requests to NoteHub.'],
+      ['Our approach', 'SearchNote does not use advertising or third-party tracking cookies.'],
+      ['What we store', 'To keep you signed in, your session token and basic profile information are stored in your browser’s local storage. This data never leaves your device except to authenticate your requests to SearchNote.'],
       ['Third parties', 'Fonts are loaded from Google Fonts, which may receive your IP address when the page loads.'],
       ['Clearing your data', 'Logging out removes the stored session. You can also clear site data at any time from your browser settings.'],
     ],
