@@ -13,8 +13,11 @@ const app = express();
 
 // Avatarlar frontend'den (farklı origin) <img> ile yüklenebilsin diye CORP gevşetiliyor.
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-// Origin'ler tarayıcının gönderdiği biçimle birebir eşleşmeli: boşluk ve sondaki "/" temizlenir.
-const allowedOrigins = process.env.CLIENT_URL?.split(',').map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean);
+// Origin'ler tarayıcının gönderdiği biçimle birebir eşleşmeli: boşluk, tırnak ve sondaki "/" temizlenir.
+const allowedOrigins = process.env.CLIENT_URL?.split(',')
+  .map((o) => o.trim().replace(/^["']|["']$/g, '').replace(/\/+$/, ''))
+  .filter(Boolean);
+console.log('🌐 CORS allowed origins:', allowedOrigins?.length ? allowedOrigins : '*');
 app.use(cors({ origin: allowedOrigins?.length ? allowedOrigins : '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
