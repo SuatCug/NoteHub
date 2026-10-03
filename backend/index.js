@@ -13,7 +13,9 @@ const app = express();
 
 // Avatarlar frontend'den (farklı origin) <img> ile yüklenebilsin diye CORP gevşetiliyor.
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: process.env.CLIENT_URL?.split(',') || '*' }));
+// Origin'ler tarayıcının gönderdiği biçimle birebir eşleşmeli: boşluk ve sondaki "/" temizlenir.
+const allowedOrigins = process.env.CLIENT_URL?.split(',').map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean);
+app.use(cors({ origin: allowedOrigins?.length ? allowedOrigins : '*' }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 if (process.env.NODE_ENV !== 'test') {
