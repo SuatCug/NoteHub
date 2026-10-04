@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -10,7 +9,6 @@ import {
   Hash,
   Heart,
   Home,
-  Menu,
   MessageCircle,
   Play,
   Search,
@@ -19,21 +17,13 @@ import {
   User,
   UserPlus,
   Users,
-  X,
 } from 'lucide-react';
-import Logo from '@/components/layout/Logo';
+import GuestNavbar from '@/components/layout/GuestNavbar';
 import Footer from '@/components/layout/Footer';
 import { useGetStatsQuery } from '@/services/statsApi';
 
 // Giriş yapmamış ziyaretçilere ana sayfada gösterilen tanıtım sayfası.
-// Arama yapan ya da "Browse notes" diyen ziyaretçi normal not listesine (HomePage) düşer.
-
-const NAV_LINKS = [
-  { id: 'top', label: 'Home' },
-  { id: 'features', label: 'Features' },
-  { id: 'how-it-works', label: 'How It Works' },
-  { id: 'community', label: 'Community' },
-];
+// Footer bağlantılarıyla arama/filtre parametresi taşıyan adrese gelen ziyaretçi normal not listesini (HomePage) görür.
 
 const FEATURES = [
   { icon: FileText, title: 'Note Sharing', text: 'Share your notes in seconds and discover what other students have uploaded.' },
@@ -60,7 +50,7 @@ const scrollToSection = (id) => {
 export default function LandingPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white">
-      <LandingNavbar />
+      <GuestNavbar />
       <main className="flex-1 overflow-x-hidden">
         <HeroSection />
         <FeaturesSection />
@@ -70,100 +60,6 @@ export default function LandingPage() {
       </main>
       <Footer />
     </div>
-  );
-}
-
-/* ---------------------------------------------------------------- Navbar */
-
-function LandingNavbar() {
-  const [open, setOpen] = useState(false);
-
-  const go = (id) => {
-    setOpen(false);
-    scrollToSection(id);
-  };
-
-  return (
-    <header className="sticky top-0 z-50 border-b border-gray-100 bg-white/90 backdrop-blur">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        <Logo />
-
-        <nav aria-label="Sections" className="hidden lg:flex items-center gap-7">
-          {NAV_LINKS.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              onClick={() => go(l.id)}
-              className="text-sm font-medium text-gray-600 hover:text-navy-700 transition-colors"
-            >
-              {l.label}
-            </button>
-          ))}
-          <Link to="/about" className="text-sm font-medium text-gray-600 hover:text-navy-700 transition-colors">
-            About
-          </Link>
-        </nav>
-
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
-          <Link
-            to="/?all=1"
-            title="Browse notes"
-            aria-label="Browse notes"
-            className="hidden sm:inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 hover:text-navy-700 transition-colors"
-          >
-            <Search size={19} />
-          </Link>
-          <Link
-            to="/login"
-            className="hidden sm:inline-flex rounded-lg border border-navy-200 px-4 py-2 text-sm font-semibold text-navy-700 hover:bg-navy-50 transition-colors"
-          >
-            Log In
-          </Link>
-          <Link
-            to="/register"
-            className="rounded-lg bg-navy-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-navy-700 transition-colors whitespace-nowrap"
-          >
-            Sign Up
-          </Link>
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-            aria-controls="landing-menu"
-            aria-label={open ? 'Close menu' : 'Open menu'}
-            className="lg:hidden inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-700 hover:bg-gray-100"
-          >
-            {open ? <X size={22} /> : <Menu size={22} />}
-          </button>
-        </div>
-      </div>
-
-      {open && (
-        <nav id="landing-menu" aria-label="Sections" className="lg:hidden border-t border-gray-100 bg-white px-4 pb-4 pt-2">
-          {NAV_LINKS.map((l) => (
-            <button
-              key={l.id}
-              type="button"
-              onClick={() => go(l.id)}
-              className="block w-full rounded-lg px-3 py-3 text-left text-[15px] font-medium text-gray-700 hover:bg-gray-50"
-            >
-              {l.label}
-            </button>
-          ))}
-          <Link to="/about" className="block rounded-lg px-3 py-3 text-[15px] font-medium text-gray-700 hover:bg-gray-50">
-            About
-          </Link>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:hidden">
-            <Link to="/?all=1" className="btn-secondary">
-              <Search size={16} /> Browse
-            </Link>
-            <Link to="/login" className="btn-secondary">
-              Log In
-            </Link>
-          </div>
-        </nav>
-      )}
-    </header>
   );
 }
 
@@ -194,9 +90,6 @@ function HeroSection() {
               <Play size={16} /> How It Works
             </button>
           </div>
-          <Link to="/?all=1" className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-navy-600 hover:text-navy-800">
-            Or browse notes without an account <ArrowRight size={15} />
-          </Link>
         </div>
 
         <DesktopMockup />

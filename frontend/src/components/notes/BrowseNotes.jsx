@@ -55,7 +55,8 @@ export default function BrowseNotes({ gridClassName }) {
 
   return (
     <>
-      {!token && !hasSearch && <Hero onSearch={(q) => updateParams({ q })} />}
+      {/* Ziyaretçinin üst çubuğunda arama olmadığı için arama alanı sonuç sayfasında da gösterilir. */}
+      {!token && <Hero key={filters.q} initialQuery={filters.q} onSearch={(q) => updateParams({ q })} />}
 
       <div className="mb-5">
         <h1 className="text-2xl font-bold text-gray-900">
@@ -125,8 +126,8 @@ export default function BrowseNotes({ gridClassName }) {
 const HERO_SUGGESTIONS = ['Calculus', 'Physics', 'Midterm', 'Algorithms', 'Statistics'];
 
 // Not listesine gelen ziyaretçiye gösterilen arama alanı.
-function Hero({ onSearch }) {
-  const [query, setQuery] = useState('');
+function Hero({ initialQuery = '', onSearch }) {
+  const [query, setQuery] = useState(initialQuery);
 
   const handleSubmit = (e) => {
     e.preventDefault();
