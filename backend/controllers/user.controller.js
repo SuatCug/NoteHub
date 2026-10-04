@@ -9,6 +9,7 @@ const { parsePagination, buildPagination } = require('../utils/pagination.util')
 const { wordSearchMatch } = require('../utils/regex.util');
 const { getExtension, matchesSignature } = require('../utils/fileTypes.util');
 const { isBlockedBetween } = require('../services/block.service');
+const { notify, removeNotification } = require('../services/notification.service');
 
 const USER_CARD_FIELDS = 'fullName avatarUrl university department';
 
@@ -173,6 +174,7 @@ const follow = asyncHandler(async (req, res) => {
   const target = await User.findByIdAndUpdate(targetId, { $addToSet: { followers: req.user.id } }, { returnDocument: 'after' });
   if (!target) throw new ApiError(404, 'User not found.');
   await User.updateOne({ _id: req.user.id }, { $addToSet: { following: targetId } });
+  await notify({ recipient: target._id, actor: req.user.id, type: 'follow' });
 
   res.json({
     success: true,
@@ -187,6 +189,7 @@ const unfollow = asyncHandler(async (req, res) => {
   const target = await User.findByIdAndUpdate(targetId, { $pull: { followers: req.user.id } }, { returnDocument: 'after' });
   if (!target) throw new ApiError(404, 'User not found.');
   await User.updateOne({ _id: req.user.id }, { $pull: { following: targetId } });
+  await removeNotification({ recipient: target._id, actor: req.user.id, type: 'follow' });
 
   res.json({
     success: true,

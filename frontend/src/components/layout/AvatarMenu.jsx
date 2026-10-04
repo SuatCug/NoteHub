@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { ChevronDown, LogOut, Settings, User, Users } from 'lucide-react';
+import { Bookmark, ChevronDown, FileText, LogOut, Settings, User, Users } from 'lucide-react';
 import { logout } from '@/app/authSlice';
 import { baseApi, SESSION_TAGS } from '@/services/baseApi';
 import UserAvatar from '@/components/users/UserAvatar';
@@ -27,13 +27,9 @@ export default function AvatarMenu() {
         onClick={() => setMenuOpen((o) => !o)}
         aria-expanded={menuOpen}
         aria-label="Account menu"
-        className="flex items-center gap-2 rounded-lg hover:bg-white/10 transition-colors p-1 sm:pr-2"
+        className="flex items-center gap-1 rounded-lg hover:bg-white/10 transition-colors p-1"
       >
         <UserAvatar user={user} size="md" className="ring-2 ring-white/30" />
-        <span className="hidden xl:block text-left leading-tight max-w-[140px]">
-          <span className="block text-sm font-semibold text-white truncate">{user?.fullName}</span>
-          <span className="block text-xs text-white/60 truncate">{user?.university}</span>
-        </span>
         <ChevronDown size={14} className={`text-white/70 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
       </button>
 
@@ -54,6 +50,20 @@ export default function AvatarMenu() {
               className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
             >
               <User size={16} className="text-gray-400" /> My Profile
+            </Link>
+            <Link
+              to={`/users/${user?.id}/notes`}
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <FileText size={16} className="text-gray-400" /> My Notes
+            </Link>
+            <Link
+              to="/?tab=saved"
+              onClick={() => setMenuOpen(false)}
+              className="flex items-center gap-2.5 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+            >
+              <Bookmark size={16} className="text-gray-400" /> Saved Notes
             </Link>
             <Link
               to="/groups?tab=mine"

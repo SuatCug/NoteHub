@@ -21,7 +21,7 @@ const baseQuery = async (args, api, extraOptions) => {
   return result;
 };
 
-const TAG_TYPES = ['Me', 'Note', 'NoteList', 'Filters', 'User', 'FollowList', 'Group', 'GroupList', 'GroupMembers', 'GroupRequests', 'GroupMessages', 'Conversations', 'Conversation', 'Unread'];
+const TAG_TYPES = ['Me', 'Note', 'NoteList', 'Filters', 'User', 'FollowList', 'Group', 'GroupList', 'GroupMembers', 'GroupRequests', 'GroupMessages', 'Conversations', 'Conversation', 'Unread', 'Notifications'];
 
 // Oturum açılıp kapandığında kullanıcıya özel alanlar (isLiked, isFollowing, isOwner) değişir;
 // bu etiketler geçersiz kılınarak açık sayfalar yeni oturumla tekrar çekilir.

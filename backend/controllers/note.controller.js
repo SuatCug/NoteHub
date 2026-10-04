@@ -4,6 +4,7 @@ const ApiError = require('../utils/apiError');
 const { Note, User } = require('../models');
 const { listNotes, assertNoteVisible, PUBLIC_NOTES_MATCH } = require('../services/note.service');
 const { assertMember } = require('../services/group.service');
+const { notify, removeNotification } = require('../services/notification.service');
 const { saveNoteFile, readNoteFile, removeFile } = require('../services/storage.service');
 const { parsePagination } = require('../utils/pagination.util');
 const { containsRegex, exactRegex, splitSearchWords, wordSearchMatch } = require('../utils/regex.util');
@@ -264,13 +265,15 @@ const downloadNote = asyncHandler(async (req, res) => {
 });
 
 const likeNote = asyncHandler(async (req, res) => {
-  await assertNoteVisible(await findNoteOrFail(req.params.id, 'group author'), req.user.id);
+  const target = await findNoteOrFail(req.params.id, 'group author');
+  await assertNoteVisible(target, req.user.id);
   const note = await Note.findByIdAndUpdate(
     req.params.id,
     { $addToSet: { likes: new mongoose.Types.ObjectId(req.user.id) } },
     { returnDocument: 'after' }
   ).select('likes');
   if (!note) throw new ApiError(404, 'Note not found.');
+  await notify({ recipient: target.author, actor: req.user.id, type: 'like', note: target._id });
 
   res.json({ success: true, data: { isLiked: true, likesCount: note.likes.length } });
 });
@@ -280,8 +283,9 @@ const unlikeNote = asyncHandler(async (req, res) => {
     req.params.id,
     { $pull: { likes: new mongoose.Types.ObjectId(req.user.id) } },
     { returnDocument: 'after' }
-  ).select('likes');
+  ).select('likes author');
   if (!note) throw new ApiError(404, 'Note not found.');
+  await removeNotification({ recipient: note.author, actor: req.user.id, type: 'like', note: note._id });
 
   res.json({ success: true, data: { isLiked: false, likesCount: note.likes.length } });
 });

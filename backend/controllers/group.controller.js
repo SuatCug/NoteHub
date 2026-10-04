@@ -4,6 +4,7 @@ const ApiError = require('../utils/apiError');
 const { Group, GroupMessage, Note } = require('../models');
 const { listGroups } = require('../services/group.service');
 const { listNotes } = require('../services/note.service');
+const { notify } = require('../services/notification.service');
 const { parsePagination } = require('../utils/pagination.util');
 const { wordSearchMatch } = require('../utils/regex.util');
 
@@ -134,6 +135,13 @@ const joinGroup = asyncHandler(async (req, res) => {
     if (group.isPrivate) group.joinRequests.addToSet(userId);
     else group.members.addToSet(userId);
     await group.save();
+    // Kurucuya: açık grupta yeni üye, özel grupta onay bekleyen istek bildirimi.
+    await notify({
+      recipient: group.owner,
+      actor: userId,
+      type: group.isPrivate ? 'group_request' : 'group_join',
+      group: group._id,
+    });
   }
 
   const isMember = group.hasMember(userId);
@@ -230,6 +238,7 @@ const approveJoinRequest = asyncHandler(async (req, res) => {
   group.joinRequests.pull(req.params.userId);
   group.members.addToSet(req.params.userId);
   await group.save();
+  await notify({ recipient: req.params.userId, actor: req.user.id, type: 'group_approved', group: group._id });
 
   res.json({ success: true, message: 'Join request approved.', data: { membersCount: group.members.length } });
 });

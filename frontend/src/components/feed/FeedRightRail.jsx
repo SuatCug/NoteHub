@@ -36,7 +36,7 @@ function ForYouCard() {
     { to: '/?tab=following', icon: UserPlus, label: 'People you follow' },
     { to: '/?tab=saved', icon: Bookmark, label: 'Saved notes' },
     { to: `/users/${userId}/notes`, icon: FileText, label: 'My notes' },
-    { to: '/groups', icon: Users, label: 'My groups' },
+    { to: '/groups?tab=mine', icon: Users, label: 'My groups' },
   ];
 
   return (

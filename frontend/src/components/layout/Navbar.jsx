@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { MessageCircle, Search, Upload, Users } from 'lucide-react';
+import { MessageCircle, Search, Upload } from 'lucide-react';
 import Logo from './Logo';
 import AvatarMenu from './AvatarMenu';
+import NotificationBell from './NotificationBell';
 import { useGetUnreadCountQuery } from '@/services/messagesApi';
 import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
 
@@ -28,6 +29,8 @@ export default function Navbar() {
   const token = useSelector((state) => state.auth.token);
   const navigate = useNavigate();
   const location = useLocation();
+  // Ana sayfada geniş ekranda sol menü (FeedSidebar) olduğu için oradaki bağlantılar üst çubukta tekrarlanmaz.
+  const onHome = location.pathname === '/';
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState(searchParams.get('q') ?? '');
 
@@ -65,19 +68,11 @@ export default function Navbar() {
         </form>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-          {/* Giriş yapmış kullanıcıda telefonda bu bağlantılar alttaki sekme çubuğundadır (MobileTabBar). */}
-          <Link
-            to="/groups"
-            title="Groups"
-            aria-label="Groups"
-            className={`${token ? 'hidden md:inline-flex' : 'hidden sm:inline-flex'} items-center gap-1.5 rounded-lg px-2 sm:px-3 py-2 text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-colors`}
-          >
-            <Users size={17} />
-            <span className="hidden xl:inline">Groups</span>
-          </Link>
+          {/* Gruplar, mesajlar ve not yükleme ana sayfanın sol menüsünde, telefonda alt sekme çubuğunda,
+              diğer sayfalarda hesap menüsünde. Mesajlar ikonu sol menünün olmadığı yerlerde gösterilir. */}
           {token ? (
             <>
-              <MessagesLink />
+              <MessagesLink hideOnLarge={onHome} />
               <Link
                 to="/upload"
                 title="Upload Note"
@@ -87,6 +82,7 @@ export default function Navbar() {
                 <Upload size={16} />
                 <span className="hidden lg:inline">Upload Note</span>
               </Link>
+              <NotificationBell />
               <AvatarMenu />
             </>
           ) : (
@@ -116,7 +112,7 @@ export default function Navbar() {
   );
 }
 
-function MessagesLink() {
+function MessagesLink({ hideOnLarge = false }) {
   const { data } = useGetUnreadCountQuery(undefined, {
     pollingInterval: UNREAD_POLL_INTERVAL_MS,
     skipPollingIfUnfocused: true,
@@ -126,14 +122,13 @@ function MessagesLink() {
   return (
     <Link
       to="/messages"
-      className="relative hidden md:inline-flex items-center gap-1.5 rounded-lg px-2 sm:px-3 py-2 text-sm font-semibold text-white/90 hover:text-white hover:bg-white/10 transition-colors"
+      className={`relative hidden md:inline-flex ${hideOnLarge ? 'lg:hidden' : ''} h-10 w-10 items-center justify-center rounded-lg text-white/90 hover:text-white hover:bg-white/10 transition-colors`}
       title="Messages"
       aria-label={count ? `Messages, ${count} unread` : 'Messages'}
     >
-      <MessageCircle size={17} />
-      <span className="hidden xl:inline">Messages</span>
+      <MessageCircle size={20} />
       {count > 0 && (
-        <span className="absolute -top-0.5 left-5 sm:left-6 min-w-[18px] rounded-full bg-rose-500 px-1 text-center text-[10px] font-bold leading-[18px] text-white ring-2 ring-navy-800">
+        <span className="absolute top-1 left-5 min-w-[18px] rounded-full bg-rose-500 px-1 text-center text-[10px] font-bold leading-[18px] text-white ring-2 ring-navy-800">
           {count > 99 ? '99+' : count}
         </span>
       )}

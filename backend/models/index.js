@@ -6,4 +6,5 @@ module.exports = {
   ContactMessage: require('./contactMessage.model'),
   Conversation: require('./conversation.model'),
   DirectMessage: require('./directMessage.model'),
+  Notification: require('./notification.model'),
 };

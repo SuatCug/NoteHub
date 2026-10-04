@@ -2,6 +2,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const ApiError = require('../utils/apiError');
 const { Note } = require('../models');
 const { assertNoteVisible } = require('../services/note.service');
+const { notify, removeNotification } = require('../services/notification.service');
 
 const USER_CARD_FIELDS = 'fullName avatarUrl university department';
 
@@ -14,6 +15,7 @@ const addComment = asyncHandler(async (req, res) => {
   await note.save();
 
   const comment = note.comments[note.comments.length - 1];
+  await notify({ recipient: note.author, actor: req.user.id, type: 'comment', note: note._id, text: req.body.text });
   await note.populate({ path: 'comments.user', select: USER_CARD_FIELDS });
 
   res.status(201).json({
@@ -35,8 +37,11 @@ const deleteComment = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'You are not allowed to delete this comment.');
   }
 
+  const { user: commenter, text } = comment;
   comment.deleteOne();
   await note.save();
+  // Silinen yorumun bildirimi de kaldırılır.
+  await removeNotification({ recipient: note.author, actor: commenter, type: 'comment', note: note._id, text: text.slice(0, 140) });
 
   res.json({ success: true, message: 'Comment deleted.', data: { commentsCount: note.comments.length } });
 });

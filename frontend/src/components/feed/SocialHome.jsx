@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Bookmark, Compass, FileUp, Flame, Loader2, UserPlus } from 'lucide-react';
@@ -10,9 +10,9 @@ import UserAvatar from '@/components/users/UserAvatar';
 import NotePostCard from './NotePostCard';
 import FeedSidebar from './FeedSidebar';
 import FeedRightRail from './FeedRightRail';
-import { useGetFeedQuery, useGetNotesQuery, useGetSavedNotesQuery, useGetTrendingCoursesQuery } from '@/services/notesApi';
+import { ActiveNowStrip, CourseChips, MobileShortcuts, SuggestionsCarousel } from './MobileFeedExtras';
+import { useGetFeedQuery, useGetNotesQuery, useGetSavedNotesQuery } from '@/services/notesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
-import { courseLink } from '@/lib/links';
 
 const FEED_PAGE_SIZE = 10;
 
@@ -67,7 +67,9 @@ function Feed({ tab }) {
   return (
     <div className="mx-auto max-w-2xl">
       <Composer />
-      <MobileCourseChips />
+      <MobileShortcuts />
+      <ActiveNowStrip />
+      <CourseChips />
 
       <div role="tablist" aria-label="Feed" className="mt-4 mb-4 flex gap-1 overflow-x-auto rounded-xl bg-gray-200/70 p-1">
         {TABS.map(({ id, label, icon: Icon }) => (
@@ -108,27 +110,6 @@ function Composer() {
         <FileUp size={16} /> Upload
       </span>
     </Link>
-  );
-}
-
-// Dar ekranlarda sağ panel gizli olduğu için popüler dersler akışın üstünde yatay kaydırmalı gösterilir.
-function MobileCourseChips() {
-  const { data } = useGetTrendingCoursesQuery();
-  const courses = data?.data?.courses ?? [];
-  if (!courses.length) return null;
-
-  return (
-    <div className="xl:hidden mt-4 -mx-4 px-4 sm:mx-0 sm:px-0 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none]">
-      {courses.map((c) => (
-        <Link
-          key={c.courseCode || c.courseName}
-          to={courseLink(c)}
-          className="shrink-0 rounded-full border border-navy-100 bg-white px-3 py-1.5 text-xs font-semibold text-navy-600 hover:bg-navy-50"
-        >
-          #{c.courseCode || c.courseName}
-        </Link>
-      ))}
-    </div>
   );
 }
 
@@ -206,7 +187,15 @@ function FeedPage({ tab, page }) {
     );
   }
 
-  return items.map((note, i) => <NotePostCard key={note._id} note={note} index={i} />);
+  // Yan panel gizliyken takip önerileri ilk sayfada 3. gönderiden sonra akışın arasına girer.
+  const showSuggestions = page === 1 && (tab === 'all' || tab === 'popular') && items.length > 3;
+
+  return items.map((note, i) => (
+    <Fragment key={note._id}>
+      <NotePostCard note={note} index={i} />
+      {showSuggestions && i === 2 && <SuggestionsCarousel />}
+    </Fragment>
+  ));
 }
 
 function PostSkeleton() {
