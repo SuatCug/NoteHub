@@ -198,7 +198,9 @@ npm run dev                 # http://localhost:5173
 | `REQUIRE_EDU_EMAIL` | `true` ise yalnızca `.edu.tr` e-postalarla kayıt |
 | `REQUIRE_EMAIL_VERIFICATION` | `true` ise e-posta doğrulanmadan yükleme / indirme / etkileşim yapılamaz |
 | `MAX_FILE_SIZE_MB` | En büyük dosya boyutu (varsayılan `25`) |
-| `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` · `SMTP_PASS` · `MAIL_FROM` | Doğrulama e-postaları için SMTP; boşsa bağlantı konsola yazılır |
+| `BREVO_API_KEY` | Doğrulama e-postaları Brevo HTTP API ile gönderilir (önerilen; SMTP portu gerektirmez) |
+| `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` · `SMTP_PASS` | Brevo yoksa SMTP ile gönderim; ikisi de boşsa doğrulama bağlantısı konsola yazılır |
+| `MAIL_FROM` | Gönderici, örn. `SearchNote <adres@ornek.com>` (Brevo'da onaylanmış gönderici olmalı) |
 | `CLOUDINARY_URL` | `cloudinary://<api_key>:<api_secret>@<cloud_name>`; boşsa dosyalar yerel diske kaydedilir |
 
 **`frontend/.env`**
@@ -285,7 +287,8 @@ kullanıcılar (60 sn) yedek olarak polling ile yenilenir.
 **Backend → Render (veya Railway, Fly.io vb.)**
 - *Root directory* = `backend`, *Build command* = `npm install`, *Start command* = `npm start`.
 - Ortam değişkenleri: `MONGO_URI` (MongoDB Atlas), `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_URL`,
-  `CLOUDINARY_URL`, `NODE_ENV=production` ve gerekirse SMTP ayarları.
+  `CLOUDINARY_URL`, `NODE_ENV=production`; e-posta doğrulaması için `REQUIRE_EMAIL_VERIFICATION=true`,
+  `BREVO_API_KEY` ve `MAIL_FROM`.
 - `CLIENT_URL`, Netlify adresiyle **birebir** aynı olmalı (örn. `https://searchnote.netlify.app`, sonda `/` olmadan);
   aksi halde CORS hatası alınır. Sunucu açılışta izin verilen origin'leri loglar.
 - Render'ın ücretsiz planında servis bir süre istek almazsa uyur; ilk istek 30–60 saniye sürebilir.

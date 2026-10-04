@@ -9,13 +9,20 @@ const { requireEmailVerification } = require('../config/features');
 
 const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
 
-// Kullanıcıya yeni bir doğrulama token'ı atar ve e-postayı gönderir.
+// Kullanıcıya yeni bir doğrulama token'ı atar ve e-postayı gönderir. Gönderim başarısızsa false döner
+// (hesap yine de kaydedilir; kullanıcı daha sonra "tekrar gönder" ile yeni bağlantı isteyebilir).
 const issueVerification = async (user) => {
   const { token, tokenHash } = createVerificationToken();
   user.verificationTokenHash = tokenHash;
   user.verificationTokenExpires = new Date(Date.now() + VERIFICATION_TTL_MS);
   await user.save();
-  await sendVerificationEmail(user, token);
+  try {
+    await sendVerificationEmail(user, token);
+    return true;
+  } catch (error) {
+    console.error('Verification email error:', error.message);
+    return false;
+  }
 };
 
 const register = asyncHandler(async (req, res) => {
@@ -31,8 +38,9 @@ const register = asyncHandler(async (req, res) => {
 
   // Doğrulama kapalıysa kod gönderilmez, hesap doğrudan kullanılabilir.
   const verificationRequired = requireEmailVerification();
+  let emailSent = true;
   if (verificationRequired) {
-    await issueVerification(user);
+    emailSent = await issueVerification(user);
   } else {
     await user.save();
   }
@@ -41,9 +49,11 @@ const register = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    message: verificationRequired
-      ? 'Registration successful. Please verify your account using the link sent to your email.'
-      : 'Registration successful.',
+    message: !verificationRequired
+      ? 'Registration successful.'
+      : emailSent
+        ? 'Registration successful. Please verify your account using the link sent to your email.'
+        : "Registration successful, but we couldn't send the verification email. Please use 'Resend' in a moment.",
     data: { user: user.toSafeJSON(), token },
   });
 });
@@ -98,7 +108,9 @@ const resendVerification = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Your email address is already verified.');
   }
 
-  await issueVerification(user);
+  if (!(await issueVerification(user))) {
+    throw new ApiError(502, 'We could not send the verification email. Please try again in a few minutes.');
+  }
 
   res.json({ success: true, message: 'Verification email sent again.' });
 });
