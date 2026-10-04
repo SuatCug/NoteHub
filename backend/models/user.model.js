@@ -23,6 +23,10 @@ const userSchema = new mongoose.Schema(
     following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
     // Engellenen kullanıcılar: birbirine mesaj atamaz, takip edemez; engelleyen kişi onların aramasında çıkmaz.
     blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    // Kaydedilen (yer imi) notlar: sadece kullanıcının kendisi görür.
+    savedNotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Note' }],
+    // Son istek zamanı ("Active now" listesi için; auth middleware'de en fazla dakikada bir güncellenir).
+    lastActiveAt: { type: Date, index: true },
     // Kurumsal e-posta doğrulaması: doğrulanmamış kullanıcı giriş yapabilir ama
     // not yükleme / indirme / beğeni / yorum / takip yapamaz.
     isVerified: { type: Boolean, default: false },

@@ -14,6 +14,18 @@ export const notesApi = baseApi.injectEndpoints({
       query: (params) => ({ url: '/notes/feed', params: cleanParams(params) }),
       providesTags: ['NoteList'],
     }),
+    getSavedNotes: builder.query({
+      query: (params) => ({ url: '/notes/saved', params: cleanParams(params) }),
+      providesTags: ['NoteList'],
+    }),
+    getTrendingCourses: builder.query({
+      query: () => '/notes/trending-courses',
+      providesTags: ['Filters'],
+    }),
+    toggleSave: builder.mutation({
+      query: ({ id, saved }) => ({ url: `/notes/${id}/save`, method: saved ? 'DELETE' : 'POST' }),
+      invalidatesTags: (result, error, { id }) => [{ type: 'Note', id }, 'NoteList'],
+    }),
     getFilters: builder.query({
       query: (params) => ({ url: '/notes/filters', params: cleanParams(params) }),
       providesTags: ['Filters'],
@@ -72,6 +84,9 @@ export const notesApi = baseApi.injectEndpoints({
 export const {
   useGetNotesQuery,
   useGetFeedQuery,
+  useGetSavedNotesQuery,
+  useGetTrendingCoursesQuery,
+  useToggleSaveMutation,
   useGetFiltersQuery,
   useGetNoteQuery,
   useCreateNoteMutation,

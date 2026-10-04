@@ -147,7 +147,10 @@ const getNote = asyncHandler(async (req, res) => {
   if (!note) throw new ApiError(404, 'Note not found.');
   await assertNoteVisible(note, req.user?.id);
 
-  res.json({ success: true, data: { note: toNoteDetail(note, req.user?.id) } });
+  const viewer = req.user && (await User.findById(req.user.id).select('savedNotes').lean());
+  const isSaved = Boolean(viewer?.savedNotes?.some((id) => id.equals(note._id)));
+
+  res.json({ success: true, data: { note: { ...toNoteDetail(note, req.user?.id), isSaved } } });
 });
 
 const createNote = asyncHandler(async (req, res) => {
@@ -283,9 +286,60 @@ const unlikeNote = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { isLiked: false, likesCount: note.likes.length } });
 });
 
+// Yer imi: kaydedilen notlar sadece kullanıcının kendisine görünür.
+const saveNote = asyncHandler(async (req, res) => {
+  await assertNoteVisible(await findNoteOrFail(req.params.id, 'group author'), req.user.id);
+  await User.updateOne({ _id: req.user.id }, { $addToSet: { savedNotes: req.params.id } });
+  res.json({ success: true, data: { isSaved: true } });
+});
+
+const unsaveNote = asyncHandler(async (req, res) => {
+  await User.updateOne({ _id: req.user.id }, { $pull: { savedNotes: req.params.id } });
+  res.json({ success: true, data: { isSaved: false } });
+});
+
+const getSavedNotes = asyncHandler(async (req, res) => {
+  const me = await User.findById(req.user.id).select('savedNotes');
+
+  const data = await listNotes({
+    match: { _id: { $in: me.savedNotes } },
+    sort: 'newest',
+    ...parsePagination(req.query),
+    viewerId: req.user.id,
+  });
+
+  res.json({ success: true, data });
+});
+
+// Akıştaki "Popular courses" etiketleri: ders kodu (yoksa ders adı) bazında not sayısı + beğeniye göre sıralanır.
+const getTrendingCourses = asyncHandler(async (req, res) => {
+  const courses = await Note.aggregate([
+    { $match: PUBLIC_NOTES_MATCH },
+    {
+      $group: {
+        _id: { $cond: [{ $gt: [{ $strLenCP: { $ifNull: ['$courseCode', ''] } }, 0] }, '$courseCode', '$courseName'] },
+        courseCode: { $first: '$courseCode' },
+        courseName: { $first: '$courseName' },
+        notesCount: { $sum: 1 },
+        likesCount: { $sum: { $size: '$likes' } },
+      },
+    },
+    { $addFields: { score: { $add: [{ $multiply: ['$notesCount', 3] }, '$likesCount'] } } },
+    { $sort: { score: -1, _id: 1 } },
+    { $limit: 10 },
+    { $project: { _id: 0, courseCode: 1, courseName: 1, notesCount: 1 } },
+  ]);
+
+  res.json({ success: true, data: { courses } });
+});
+
 module.exports = {
   searchNotes,
   getFeed,
+  getSavedNotes,
+  getTrendingCourses,
+  saveNote,
+  unsaveNote,
   getFilterOptions,
   getNote,
   createNote,

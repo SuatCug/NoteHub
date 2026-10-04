@@ -100,6 +100,59 @@ const getUserNotes = asyncHandler(async (req, res) => {
   res.json({ success: true, data });
 });
 
+// Kendisi, engelledikleri ve onu engelleyenler hariç tutulur (akış yan paneli listeleri için).
+const excludeSelfAndBlocked = (me) => ({
+  _id: { $nin: [me._id, ...me.blockedUsers] },
+  blockedUsers: { $ne: me._id },
+});
+
+const ACTIVE_WINDOW_MS = 15 * 60 * 1000;
+
+// "Active now": son 15 dakikada istek atan kullanıcılar; takip edilenler öne alınır.
+const getActiveUsers = asyncHandler(async (req, res) => {
+  const me = await User.findById(req.user.id).select('following blockedUsers');
+  const match = { ...excludeSelfAndBlocked(me), lastActiveAt: { $gte: new Date(Date.now() - ACTIVE_WINDOW_MS) } };
+
+  const [users, total] = await Promise.all([
+    User.aggregate([
+      { $match: match },
+      { $addFields: { isFollowing: { $in: ['$_id', me.following] } } },
+      { $sort: { isFollowing: -1, lastActiveAt: -1 } },
+      { $limit: 8 },
+      { $project: { fullName: 1, avatarUrl: 1, university: 1, department: 1 } },
+    ]),
+    User.countDocuments(match),
+  ]);
+
+  res.json({ success: true, data: { users, total } });
+});
+
+// "Who to follow": henüz takip edilmeyen, aynı üniversite/bölümdekiler öncelikli, sonra en çok takipçisi olanlar.
+const getSuggestions = asyncHandler(async (req, res) => {
+  const me = await User.findById(req.user.id).select('following blockedUsers university department');
+  const base = excludeSelfAndBlocked(me);
+
+  const users = await User.aggregate([
+    { $match: { ...base, _id: { $nin: [...base._id.$nin, ...me.following] } } },
+    {
+      $addFields: {
+        followersCount: { $size: '$followers' },
+        affinity: {
+          $add: [
+            { $cond: [{ $eq: ['$university', me.university] }, 2, 0] },
+            { $cond: [{ $eq: ['$department', me.department] }, 1, 0] },
+          ],
+        },
+      },
+    },
+    { $sort: { affinity: -1, followersCount: -1, _id: 1 } },
+    { $limit: 5 },
+    { $project: { fullName: 1, avatarUrl: 1, university: 1, department: 1, followersCount: 1 } },
+  ]);
+
+  res.json({ success: true, data: { users } });
+});
+
 const getFollowers = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id).populate('followers', USER_CARD_FIELDS);
   if (!user) throw new ApiError(404, 'User not found.');
@@ -204,6 +257,8 @@ const changePassword = asyncHandler(async (req, res) => {
 
 module.exports = {
   searchUsers,
+  getActiveUsers,
+  getSuggestions,
   getProfile,
   getUserNotes,
   getFollowers,

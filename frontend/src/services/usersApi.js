@@ -17,6 +17,14 @@ export const usersApi = baseApi.injectEndpoints({
       query: (params) => ({ url: '/users/search', params }),
       providesTags: ['User'],
     }),
+    getActiveUsers: builder.query({
+      query: () => '/users/active',
+      providesTags: ['User'],
+    }),
+    getSuggestions: builder.query({
+      query: () => '/users/suggestions',
+      providesTags: ['User'],
+    }),
     getProfile: builder.query({
       query: (id) => `/users/${id}`,
       providesTags: (result, error, id) => [{ type: 'User', id }, 'User'],
@@ -62,6 +70,8 @@ export const usersApi = baseApi.injectEndpoints({
 
 export const {
   useSearchUsersQuery,
+  useGetActiveUsersQuery,
+  useGetSuggestionsQuery,
   useGetProfileQuery,
   useGetUserNotesQuery,
   useGetFollowersQuery,

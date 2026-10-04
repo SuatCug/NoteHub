@@ -22,7 +22,7 @@ export default function FilterBar({ values, onChange, onReset }) {
   const set = (key, value) => onChange(key === 'university' ? { university: value, department: '' } : { [key]: value });
 
   return (
-    <div className="card p-4">
+    <div className="card p-4 @container">
       <div className="flex flex-wrap items-center gap-3">
         <button
           type="button"
@@ -65,7 +65,7 @@ export default function FilterBar({ values, onChange, onReset }) {
       </div>
 
       {open && (
-        <div className="mt-4 pt-4 border-t border-gray-100 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-4 pt-4 border-t border-gray-100 grid gap-3 @md:grid-cols-2 @2xl:grid-cols-3 @4xl:grid-cols-5">
           <SelectFilter
             label="University"
             value={values.university}
@@ -103,7 +103,7 @@ export default function FilterBar({ values, onChange, onReset }) {
             <button
               type="button"
               onClick={onReset}
-              className="sm:col-span-2 lg:col-span-5 justify-self-start inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-rose-500"
+              className="col-span-full justify-self-start inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-rose-500"
             >
               <X size={14} /> Clear filters
             </button>

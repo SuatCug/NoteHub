@@ -21,6 +21,8 @@ const verifiedOnly = [authenticate, requireVerified];
 router.get('/', listNotesRules, validate, optionalAuth, noteController.searchNotes);
 router.get('/filters', noteController.getFilterOptions);
 router.get('/feed', authenticate, noteController.getFeed);
+router.get('/saved', authenticate, noteController.getSavedNotes);
+router.get('/trending-courses', noteController.getTrendingCourses);
 router.get('/:id', idParamRules, validate, optionalAuth, noteController.getNote);
 
 // Not yükleme / düzenleme / silme (multipart/form-data, dosya alanı: "file")
@@ -35,6 +37,10 @@ router.get('/:id/download', idParamRules, validate, verifiedOnly, noteController
 // Beğeni
 router.post('/:id/like', idParamRules, validate, verifiedOnly, noteController.likeNote);
 router.delete('/:id/like', idParamRules, validate, verifiedOnly, noteController.unlikeNote);
+
+// Yer imi (kaydet)
+router.post('/:id/save', idParamRules, validate, authenticate, noteController.saveNote);
+router.delete('/:id/save', idParamRules, validate, authenticate, noteController.unsaveNote);
 
 // Yorumlar
 router.post('/:id/comments', idParamRules, commentRules, validate, verifiedOnly, commentController.addComment);

@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const { Note, Group } = require('../models');
+const { Note, Group, User } = require('../models');
 const ApiError = require('../utils/apiError');
 const { buildPagination } = require('../utils/pagination.util');
 
@@ -12,7 +12,7 @@ const SORT_OPTIONS = {
 
 // Not listelerinde (arama, akış, profil) ortak kullanılan kart görünümü.
 // Beğeni/yorum dizilerinin tamamı yerine sadece sayıları döndürülür.
-const cardProjection = (viewerId) => ({
+const cardProjection = (viewerId, savedIds = []) => ({
   title: 1,
   description: 1,
   university: 1,
@@ -29,6 +29,7 @@ const cardProjection = (viewerId) => ({
   likesCount: 1,
   commentsCount: { $size: '$comments' },
   isLiked: viewerId ? { $in: [new mongoose.Types.ObjectId(viewerId), '$likes'] } : { $literal: false },
+  isSaved: savedIds.length ? { $in: ['$_id', savedIds] } : { $literal: false },
   author: {
     _id: '$author._id',
     fullName: '$author.fullName',
@@ -60,6 +61,8 @@ const assertNoteVisible = async (note, viewerId) => {
 // includeGroupNotes: grup sayfası için (üyelik kontrolü önceden yapılır); aksi halde sadece genel notlar listelenir.
 const listNotes = async ({ match = {}, sort = 'newest', page, limit, skip, viewerId, includeGroupNotes = false }) => {
   const fullMatch = includeGroupNotes ? match : { $and: [match, PUBLIC_NOTES_MATCH] };
+  // Kartlardaki yer imi durumu için izleyicinin kaydettiği notlar.
+  const savedIds = viewerId ? ((await User.findById(viewerId).select('savedNotes').lean())?.savedNotes ?? []) : [];
   const [result] = await Note.aggregate([
     { $match: fullMatch },
     { $addFields: { likesCount: { $size: '$likes' } } },
@@ -71,7 +74,7 @@ const listNotes = async ({ match = {}, sort = 'newest', page, limit, skip, viewe
           { $limit: limit },
           { $lookup: { from: 'users', localField: 'author', foreignField: '_id', as: 'author' } },
           { $unwind: '$author' },
-          { $project: cardProjection(viewerId) },
+          { $project: cardProjection(viewerId, savedIds) },
         ],
         total: [{ $count: 'count' }],
       },

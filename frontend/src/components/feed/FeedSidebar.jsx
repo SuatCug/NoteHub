@@ -1,0 +1,70 @@
+import { Link, NavLink, useLocation, useSearchParams } from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { Bookmark, Compass, Home, MessageCircle, Upload, UserRound, Users } from 'lucide-react';
+import UserAvatar from '@/components/users/UserAvatar';
+import { useGetUnreadCountQuery } from '@/services/messagesApi';
+import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
+
+const itemClass = (active) =>
+  `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium transition-colors ${
+    active ? 'bg-navy-50 text-navy-700 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+  }`;
+
+// Ana sayfa akışının sol menüsü (sadece geniş ekranlarda; telefonda alt sekme çubuğu kullanılır).
+export default function FeedSidebar() {
+  const user = useSelector((state) => state.auth.user);
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const { data } = useGetUnreadCountQuery(undefined, {
+    pollingInterval: UNREAD_POLL_INTERVAL_MS,
+    skipPollingIfUnfocused: true,
+  });
+  const unread = data?.data?.count ?? 0;
+
+  // Ana sayfa sekmeleri query string ile ayrıldığı için aktiflik elle hesaplanır.
+  const onHome = location.pathname === '/';
+  const isExplore = onHome && [...searchParams.keys()].some((k) => k !== 'tab');
+  const tab = searchParams.get('tab');
+  const isSaved = onHome && !isExplore && tab === 'saved';
+  const isHome = onHome && !isExplore && !isSaved;
+
+  return (
+    <nav aria-label="Main" className="space-y-1">
+      <Link to={`/users/${user?.id}`} className="mb-3 flex items-center gap-3 rounded-2xl p-2 hover:bg-gray-100 transition-colors">
+        <UserAvatar user={user} size="md" />
+        <span className="min-w-0">
+          <span className="block truncate text-sm font-semibold text-gray-900">{user?.fullName}</span>
+          <span className="block truncate text-xs text-gray-500">{user?.department}</span>
+        </span>
+      </Link>
+
+      <Link to="/" className={itemClass(isHome)}>
+        <Home size={20} /> Home
+      </Link>
+      <Link to="/?all=1" className={itemClass(isExplore)}>
+        <Compass size={20} /> Explore
+      </Link>
+      <NavLink to="/messages" className={({ isActive }) => itemClass(isActive)}>
+        <MessageCircle size={20} /> Messages
+        {unread > 0 && (
+          <span className="ml-auto min-w-[20px] rounded-full bg-rose-500 px-1.5 text-center text-[11px] font-bold leading-5 text-white">
+            {unread > 99 ? '99+' : unread}
+          </span>
+        )}
+      </NavLink>
+      <NavLink to="/groups" className={({ isActive }) => itemClass(isActive)}>
+        <Users size={20} /> Groups
+      </NavLink>
+      <Link to="/?tab=saved" className={itemClass(isSaved)}>
+        <Bookmark size={20} /> Saved
+      </Link>
+      <NavLink to={`/users/${user?.id}`} end className={({ isActive }) => itemClass(isActive)}>
+        <UserRound size={20} /> Profile
+      </NavLink>
+
+      <Link to="/upload" className="btn-primary mt-4 w-full py-3 rounded-xl">
+        <Upload size={17} /> Upload Note
+      </Link>
+    </nav>
+  );
+}

@@ -15,6 +15,8 @@ router.patch('/me/password', authenticate, changePasswordRules, validate, userCo
 
 // Herkese açık profiller (/search, /:id'den önce tanımlanmalı)
 router.get('/search', optionalAuth, userController.searchUsers);
+router.get('/active', authenticate, userController.getActiveUsers);
+router.get('/suggestions', authenticate, userController.getSuggestions);
 router.get('/:id', idParamRules, validate, optionalAuth, userController.getProfile);
 router.get('/:id/notes', idParamRules, validate, optionalAuth, userController.getUserNotes);
 router.get('/:id/followers', idParamRules, validate, userController.getFollowers);
