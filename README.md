@@ -31,8 +31,8 @@ SearchNote, sınav dönemlerinde herkesin aynı özetleri tekrar tekrar yazması
 bir not, aynı dersi alan herkesin işine yarasın diye platform üç fikir üzerine kurulu:
 
 - **📤 Paylaş** – PDF, Word, görsel veya arşiv olarak notunu yükle; üniversite, bölüm,
-  ders kodu, hoca ve dönem bilgileriyle etiketle. Kredi ya da puan sistemi yok, indirme
-  sınırsız ve ücretsiz.
+  ders kodu, hoca ve dönem bilgileriyle etiketle. Notu herkesle, sadece takipçilerinle ya da
+  bir çalışma grubuyla paylaş. Kredi ya da puan sistemi yok, indirme sınırsız ve ücretsiz.
 - **🔎 Keşfet** – Sosyal medya düzenindeki akışta yeni ve popüler notları gör; ders,
   hoca, üniversite ya da yazar adıyla ara, filtrele, beğendiklerini kaydet.
 - **🤝 Bağ kur** – Notların yazarlarını takip et, yorum yap, birebir mesajlaş, aynı
@@ -40,7 +40,8 @@ bir not, aynı dersi alan herkesin işine yarasın diye platform üç fikir üze
 
 Giriş yapmamış ziyaretçi bir tanıtım (landing) sayfası görür; not kataloğu ve arama
 yalnızca üyelere açıktır. Paylaşılan tek bir not, profil ya da grup bağlantısı ise
-ziyaretçiye de açılır, böylece paylaşılan linkler kırılmaz.
+ziyaretçiye de açılır, böylece paylaşılan linkler kırılmaz. Yeni üyeler e-posta adreslerini
+doğrulamadan sitede gezemez.
 
 > **Not:** Bu depo, çalışması için gerçek bir backend'e ihtiyaç duyar. Sahte/mock API
 > katmanı yoktur; frontend, `VITE_API_URL` üzerinden Express + MongoDB API'sine bağlanır.
@@ -52,7 +53,10 @@ ziyaretçiye de açılır, böylece paylaşılan linkler kırılmaz.
 - PDF, DOCX, JPG/PNG ve ZIP/RAR yükleme (varsayılan en fazla 25 MB)
 - Dosya içeriğinin imzasıyla uzantının karşılaştırılması — uzantısı değiştirilmiş dosyalar reddedilir
 - PDF ve görseller için sayfa içi önizleme (pdf.js); önizleme indirme sayacını artırmaz
-- Not düzenleme/silme, notu isteğe bağlı olarak bir çalışma grubuna (yalnız üyelere açık) paylaşma
+- Not düzenleme/silme
+- **Görünürlük seçimi:** *Everyone* (herkes), *Followers only* (sadece takipçiler) ya da *A study group*
+  (sadece grup üyeleri). Takipçilere özel notlar akışta, aramada, profilde, detay/indirme/önizlemede ve
+  mesajla paylaşımda yalnızca yazarı takip edenlere görünür; kartlarda "Followers" rozetiyle işaretlenir
 
 **Sosyal akış**
 - Sol menü · ortada akış · sağda öneriler şeklinde üç sütunlu ana sayfa
@@ -96,12 +100,24 @@ ziyaretçiye de açılır, böylece paylaşılan linkler kırılmaz.
 - Akışın üstünde kısayol kartları (Explore, Saved, My notes, My groups), hikâye tarzı "Active now" şeridi,
   yatay kaydırmalı popüler ders etiketleri ve akış arasında takip önerisi kartları
 
+**✉️ Hesap & e-posta doğrulama**
+- Kayıttan sonra 24 saat geçerli, tek kullanımlık doğrulama bağlantısı (Brevo HTTP API ile gönderilir;
+  yoksa SMTP, o da yoksa geliştirmede konsola yazılır)
+- **Doğrulama zorunlu:** doğrulanmamış hesap her sayfada "Check your email" ekranına yönlendirilir;
+  bu ekrandan bağlantıyı tekrar isteyebilir ya da çıkış yapabilir
+- Bağlantı başka bir cihazda/sekmede tıklansa bile ekran durumu birkaç saniyede bir kontrol eder ve
+  doğrulanınca kendiliğinden siteye geçer
+- Kilit API düzeyinde de uygulanır: doğrulanmamış oturumların içerik endpoint'leri `403` döner,
+  Socket.io bağlantısı reddedilir
+- Mail gönderilemezse kayıt bozulmaz; kullanıcı daha sonra yeni bağlantı isteyebilir
+- İsteğe bağlı `.edu.tr` e-posta şartı (özellik anahtarıyla açılıp kapatılır)
+
 **Altyapı**
 - JWT tabanlı kimlik doğrulama, `bcryptjs` ile şifre hash'leme
 - `express-validator` ile istek doğrulama, `helmet` + `cors` + `morgan` katmanları, mesajlarda hız sınırı
 - Not kataloğu ve kişi araması API düzeyinde üyelere kısıtlı
 - Dosyalar Cloudinary'de (not dosyaları imzalı / yetkili erişimle) ya da yapılandırılmamışsa yerel diskte
-- İsteğe bağlı `.edu.tr` e-posta şartı ve e-posta doğrulaması (özellik anahtarlarıyla açılıp kapatılır)
+- Özellik anahtarları: `REQUIRE_EMAIL_VERIFICATION`, `REQUIRE_EDU_EMAIL` (`.env` üzerinden açılıp kapatılır)
 - `npm run seed` ile demo kullanıcı, not, grup ve sohbet verisinin yüklenmesi
 
 ## 📸 Ekran görüntüleri
@@ -129,11 +145,12 @@ proje4/
 ├── backend/                 # Express 5 API + Socket.io
 │   ├── config/              # MongoDB bağlantısı, özellik anahtarları (features.js)
 │   ├── controllers/         # auth, note, comment, user, group, message, notification, stats, contact
-│   ├── middlewares/         # auth, verified, validate, upload (multer), rateLimit, error
+│   ├── middlewares/         # auth (+ doğrulanmamış oturum kilidi), verified, validate, upload, rateLimit, error
 │   ├── models/              # User, Note, Group, GroupMessage, Conversation, DirectMessage,
 │   │                        # Notification, ContactMessage (Mongoose)
 │   ├── routes/              # /api/* uç tanımları
-│   ├── services/            # realtime (socket emit + çevrimiçi durum), storage, notification, note, group, block, mail
+│   ├── services/            # realtime (socket emit + çevrimiçi durum), storage, notification, note
+│   │                        # (görünürlük kuralları), group, block, mail (Brevo / SMTP)
 │   ├── sockets/             # Socket.io sunucusu: JWT el sıkışması, kullanıcı/grup odaları, presence
 │   ├── scripts/             # seed.js (demo veri), migrateToCloudinary.js
 │   ├── validations/         # express-validator kural setleri
@@ -196,7 +213,7 @@ npm run dev                 # http://localhost:5173
 | `JWT_EXPIRES_IN` | Token ömrü (örn. `7d`) |
 | `CLIENT_URL` | İzin verilen frontend origin(leri); birden fazlaysa virgülle ayır. İlki doğrulama e-postasındaki bağlantı için de kullanılır |
 | `REQUIRE_EDU_EMAIL` | `true` ise yalnızca `.edu.tr` e-postalarla kayıt |
-| `REQUIRE_EMAIL_VERIFICATION` | `true` ise e-posta doğrulanmadan yükleme / indirme / etkileşim yapılamaz |
+| `REQUIRE_EMAIL_VERIFICATION` | `true` ise e-postasını doğrulamamış hesaplar sitede gezemez (doğrulama ekranına yönlendirilir, API `403` döner) |
 | `MAX_FILE_SIZE_MB` | En büyük dosya boyutu (varsayılan `25`) |
 | `BREVO_API_KEY` | Doğrulama e-postaları Brevo HTTP API ile gönderilir (önerilen; SMTP portu gerektirmez) |
 | `SMTP_HOST` · `SMTP_PORT` · `SMTP_USER` · `SMTP_PASS` | Brevo yoksa SMTP ile gönderim; ikisi de boşsa doğrulama bağlantısı konsola yazılır |
@@ -226,8 +243,12 @@ npm run dev                 # http://localhost:5173
 
 ## 🌐 API uçları (özet)
 
-Tüm uçlar `/api` önekiyle sunulur. `🔒` kimlik doğrulama (`Authorization: Bearer <token>`),
-`✅` ayrıca doğrulanmış hesap gerektirir (`REQUIRE_EMAIL_VERIFICATION` açıksa).
+Tüm uçlar `/api` önekiyle sunulur. `🔒` kimlik doğrulama (`Authorization: Bearer <token>`) gerektirir.
+`REQUIRE_EMAIL_VERIFICATION` açıkken doğrulanmamış oturumlar `/auth`, `/stats` ve `/contact` dışındaki
+tüm uçlarda `403` alır.
+
+Not görünürlüğü: `visibility` alanı `public` (varsayılan) ya da `followers` olabilir; takipçilere özel
+notlar yalnızca yazara ve onu takip edenlere listelenir/açılır, diğerlerine `404` döner.
 
 | Yöntem | Uç | Açıklama |
 |---|---|---|
@@ -238,14 +259,14 @@ Tüm uçlar `/api` önekiyle sunulur. `🔒` kimlik doğrulama (`Authorization: 
 | `GET` | `/notes/feed` · `/notes/saved` 🔒 | Takip edilenlerin notları / kaydedilen notlar |
 | `GET` | `/notes/filters` · `/notes/trending-courses` 🔒 | Filtre seçenekleri / popüler dersler |
 | `GET` | `/notes/:id` | Not detayı (paylaşılan bağlantılar için herkese açık) |
-| `POST` · `PATCH` · `DELETE` | `/notes` · `/notes/:id` 🔒✅ | Not yükleme (multipart, alan: `file`) / düzenleme / silme |
-| `GET` | `/notes/:id/preview` · `/notes/:id/download` 🔒✅ | Önizleme / indirme |
-| `POST` · `DELETE` | `/notes/:id/like` 🔒✅ · `/notes/:id/save` 🔒 | Beğeni / kaydetme |
-| `POST` · `DELETE` | `/notes/:id/comments` 🔒✅ · `/notes/:id/comments/:commentId` 🔒 | Yorum ekleme / silme |
+| `POST` · `PATCH` · `DELETE` | `/notes` · `/notes/:id` 🔒 | Not yükleme (multipart, alan: `file`; isteğe bağlı `visibility`, `group`) / düzenleme / silme |
+| `GET` | `/notes/:id/preview` · `/notes/:id/download` 🔒 | Önizleme / indirme |
+| `POST` · `DELETE` | `/notes/:id/like` 🔒 · `/notes/:id/save` 🔒 | Beğeni / kaydetme |
+| `POST` · `DELETE` | `/notes/:id/comments` 🔒 · `/notes/:id/comments/:commentId` 🔒 | Yorum ekleme / silme |
 | `GET` | `/users/search` · `/users/active` · `/users/suggestions` 🔒 | Kişi arama / aktif takipleşilenler / takip önerileri |
 | `GET` | `/users/:id` · `/users/:id/notes` · `/users/:id/followers` · `/users/:id/following` | Profil ve listeleri |
 | `PATCH` · `PUT` | `/users/me` · `/users/me/avatar` · `/users/me/password` 🔒 | Profil, avatar, şifre güncelleme |
-| `POST` · `DELETE` | `/users/:id/follow` 🔒✅ · `/users/:id/block` 🔒 | Takip / engelleme |
+| `POST` · `DELETE` | `/users/:id/follow` 🔒 · `/users/:id/block` 🔒 | Takip / engelleme |
 | `GET` · `POST` | `/groups` · `/groups/mine` | Grup arama / gruplarım / grup oluşturma |
 | `GET` · `PATCH` · `DELETE` | `/groups/:id` | Grup detayı / düzenleme / silme (kurucu) |
 | `POST` · `DELETE` | `/groups/:id/join` 🔒 | Katılma (özel grupta istek) / ayrılma |
@@ -288,7 +309,10 @@ kullanıcılar (60 sn) yedek olarak polling ile yenilenir.
 - *Root directory* = `backend`, *Build command* = `npm install`, *Start command* = `npm start`.
 - Ortam değişkenleri: `MONGO_URI` (MongoDB Atlas), `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_URL`,
   `CLOUDINARY_URL`, `NODE_ENV=production`; e-posta doğrulaması için `REQUIRE_EMAIL_VERIFICATION=true`,
-  `BREVO_API_KEY` ve `MAIL_FROM`.
+  `BREVO_API_KEY` ve `MAIL_FROM` (değeri tırnaksız, örn. `SearchNote <adres@ornek.com>`).
+- Brevo: gönderici adresi *Senders* bölümünde onaylı olmalı; *Security → Authorized IPs* açıksa Render'ın
+  sunucusundan gelen istekler engellenir — bu ayarı kapatın ya da IP'yi onaylayın. Kendi alan adınızı
+  doğrulatmak, maillerin spam'e düşme ihtimalini azaltır.
 - `CLIENT_URL`, Netlify adresiyle **birebir** aynı olmalı (örn. `https://searchnote.netlify.app`, sonda `/` olmadan);
   aksi halde CORS hatası alınır. Sunucu açılışta izin verilen origin'leri loglar.
 - Render'ın ücretsiz planında servis bir süre istek almazsa uyur; ilk istek 30–60 saniye sürebilir.
