@@ -7,7 +7,7 @@ const { notify, removeNotification } = require('../services/notification.service
 const USER_CARD_FIELDS = 'fullName avatarUrl university department';
 
 const addComment = asyncHandler(async (req, res) => {
-  const note = await Note.findById(req.params.id).select('comments group author');
+  const note = await Note.findById(req.params.id).select('comments group author visibility');
   if (!note) throw new ApiError(404, 'Note not found.');
   await assertNoteVisible(note, req.user.id);
 

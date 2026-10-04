@@ -20,6 +20,7 @@ const EDITABLE_FIELDS = [
   'courseName',
   'instructorName',
   'semester',
+  'visibility',
 ];
 
 const NOTE_SEARCH_FIELDS = [
@@ -178,6 +179,8 @@ const createNote = asyncHandler(async (req, res) => {
       ...fields,
       author: req.user.id,
       group: req.body.group || undefined,
+      // Gruba paylaşılan notun görünürlüğünü grup belirler.
+      ...(req.body.group && { visibility: 'public' }),
       fileUrl,
       originalName: req.file.originalname,
       fileType: NOTE_FILE_TYPES[ext],
@@ -265,7 +268,7 @@ const downloadNote = asyncHandler(async (req, res) => {
 });
 
 const likeNote = asyncHandler(async (req, res) => {
-  const target = await findNoteOrFail(req.params.id, 'group author');
+  const target = await findNoteOrFail(req.params.id, 'group author visibility');
   await assertNoteVisible(target, req.user.id);
   const note = await Note.findByIdAndUpdate(
     req.params.id,
@@ -292,7 +295,7 @@ const unlikeNote = asyncHandler(async (req, res) => {
 
 // Yer imi: kaydedilen notlar sadece kullanıcının kendisine görünür.
 const saveNote = asyncHandler(async (req, res) => {
-  await assertNoteVisible(await findNoteOrFail(req.params.id, 'group author'), req.user.id);
+  await assertNoteVisible(await findNoteOrFail(req.params.id, 'group author visibility'), req.user.id);
   await User.updateOne({ _id: req.user.id }, { $addToSet: { savedNotes: req.params.id } });
   res.json({ success: true, data: { isSaved: true } });
 });

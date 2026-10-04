@@ -149,13 +149,13 @@ const sendMessage = asyncHandler(async (req, res) => {
   // Eklenen not hem gönderene hem alıcıya görünür olmalı (grup notları sadece grup üyelerine görünür).
   let noteId;
   if (req.body.noteId) {
-    const note = await Note.findById(req.body.noteId).select('group author');
+    const note = await Note.findById(req.body.noteId).select('group author visibility');
     if (!note) throw new ApiError(404, 'Note not found.');
     await assertNoteVisible(note, me);
     try {
       await assertNoteVisible(note, otherId);
     } catch {
-      throw new ApiError(403, "This note is only visible to its group, so the recipient can't open it.");
+      throw new ApiError(403, "The recipient can't see this note (it's shared with a group or only with the author's followers).");
     }
     noteId = note._id;
   }

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { UploadCloud, X } from 'lucide-react';
+import { Globe, UploadCloud, UserCheck, Users, X } from 'lucide-react';
 import Alert from '@/components/common/Alert';
 import { ACCEPTED_EXTENSIONS, MAX_FILE_SIZE_MB } from '@/lib/constants';
 import { formatFileSize } from '@/lib/format';
@@ -16,9 +16,26 @@ const FIELDS = [
 
 const getExtension = (name) => name.slice(name.lastIndexOf('.')).toLowerCase();
 
+// Notu kimlerin görebileceği: herkes, sadece takipçiler ya da (yüklerken) bir çalışma grubunun üyeleri.
+const VISIBILITY_OPTIONS = [
+  { value: 'public', icon: Globe, title: 'Everyone', text: 'Shown in feeds, search and on your profile.' },
+  { value: 'followers', icon: UserCheck, title: 'Followers only', text: 'Only people who follow you can see and download it.' },
+  { value: 'group', icon: Users, title: 'A study group', text: "Only the group's members. Not shown on your profile." },
+];
+
 // Not yükleme ve düzenleme formu. withFile=false ise (düzenleme) dosya alanı gösterilmez.
 // groups verilirse (kullanıcının üyesi olduğu gruplar) not bir gruba da paylaşılabilir.
-export default function NoteForm({ initialValues, withFile = true, groups, onSubmit, isLoading, submitLabel, error }) {
+// allowVisibility=false: görünürlük seçimi gösterilmez (örn. gruba paylaşılmış notu düzenlerken).
+export default function NoteForm({
+  initialValues,
+  withFile = true,
+  groups,
+  allowVisibility = true,
+  onSubmit,
+  isLoading,
+  submitLabel,
+  error,
+}) {
   const [values, setValues] = useState(() => ({
     title: '',
     description: '',
@@ -30,7 +47,17 @@ export default function NoteForm({ initialValues, withFile = true, groups, onSub
     department: '',
     group: '',
     ...initialValues,
+    // Eski notlarda alan yok: varsayılan herkese açık.
+    visibility: initialValues?.visibility || 'public',
   }));
+  // Seçili kitle: grup seçiliyse "group", değilse notun görünürlüğü.
+  const audience = values.group ? 'group' : values.visibility || 'public';
+  const setAudience = (next) =>
+    setValues((v) => ({
+      ...v,
+      visibility: next === 'followers' ? 'followers' : 'public',
+      group: next === 'group' ? v.group || groups[0]._id : '',
+    }));
   const [file, setFile] = useState(null);
   const [fileError, setFileError] = useState('');
   const [dragging, setDragging] = useState(false);
@@ -124,25 +151,60 @@ export default function NoteForm({ initialValues, withFile = true, groups, onSub
         </div>
       )}
 
-      {groups?.length > 0 && (
-        <div>
-          <label htmlFor="group" className="form-label">
-            Where to share
-          </label>
-          <select id="group" name="group" value={values.group} onChange={handleChange} className="form-input">
-            <option value="">Everyone (public)</option>
-            {groups.map((g) => (
-              <option key={g._id} value={g._id}>
-                Group: {g.name}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1.5 text-xs text-gray-500">
-            {values.group
-              ? "Only members of this group will see the note. It won't appear on the home page or your profile."
-              : 'Everyone can see and download the note from the home page and your profile.'}
-          </p>
-        </div>
+      {allowVisibility && (
+        <fieldset>
+          <legend className="form-label">Who can see this note?</legend>
+          <div className={`grid gap-2 ${groups?.length ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+            {VISIBILITY_OPTIONS.filter((o) => o.value !== 'group' || groups?.length).map(({ value, icon: Icon, title, text }) => {
+              const active = audience === value;
+              return (
+                <label
+                  key={value}
+                  className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors ${
+                    active ? 'border-navy-500 bg-navy-50/60 ring-1 ring-navy-500' : 'border-gray-200 hover:border-navy-200'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="audience"
+                    value={value}
+                    checked={active}
+                    onChange={() => setAudience(value)}
+                    className="sr-only"
+                  />
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                      active ? 'bg-navy-600 text-white' : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    <Icon size={18} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold text-gray-900">{title}</span>
+                    <span className="block text-xs leading-snug text-gray-500">{text}</span>
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+
+          {audience === 'group' && (
+            <select
+              id="group"
+              name="group"
+              aria-label="Group"
+              value={values.group}
+              onChange={handleChange}
+              className="form-input mt-3"
+            >
+              {groups.map((g) => (
+                <option key={g._id} value={g._id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          )}
+        </fieldset>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">

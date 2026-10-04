@@ -23,6 +23,7 @@ const cardProjection = (viewerId, savedIds = []) => ({
   semester: 1,
   originalName: 1,
   fileType: 1,
+  visibility: 1,
   fileSize: 1,
   downloadsCount: 1,
   createdAt: 1,
@@ -42,27 +43,46 @@ const cardProjection = (viewerId, savedIds = []) => ({
 // Genel paylaşım ile grup paylaşımı ayrıdır: gruba paylaşılan notlar ana sayfa, akış, profil ve
 // filtrelerde görünmez; sadece grup sayfasında, o grubun üyelerine listelenir.
 // (Grup silinince notun group alanı kaldırılır ve not genel paylaşıma döner.)
-const PUBLIC_NOTES_MATCH = { group: null };
+// Herkese açık notlar: grupsuz ve "sadece takipçiler" olmayanlar (eski kayıtlarda visibility alanı yok = public).
+// Filtre seçenekleri, popüler dersler ve genel sayaçlar sadece bunlardan üretilir.
+const PUBLIC_NOTES_MATCH = { group: null, visibility: { $ne: 'followers' } };
+
+// İzleyicinin görebileceği grupsuz notlar: herkese açık olanlar + kendi notları + takip ettiklerinin
+// "sadece takipçiler" notları.
+const visibleNotesMatch = (viewerId, following = []) => ({
+  group: null,
+  $or: [
+    { visibility: { $ne: 'followers' } },
+    ...(viewerId ? [{ author: { $in: [new mongoose.Types.ObjectId(viewerId), ...following] } }] : []),
+  ],
+});
 
 // Tek bir notun izleyiciye görünür olup olmadığını kontrol eder; görünmüyorsa not yokmuş gibi 404 döner.
-// Grup notlarını sadece grup üyeleri ve notun yazarı görebilir.
-// note: group ve author alanları seçilmiş not dokümanı (group populate edilmiş de olabilir).
+// Grup notlarını sadece grup üyeleri, "sadece takipçiler" notlarını sadece yazarı takip edenler görebilir;
+// notun yazarı her zaman görür.
+// note: group, author ve visibility alanları seçilmiş not dokümanı (group/author populate edilmiş olabilir).
 const assertNoteVisible = async (note, viewerId) => {
   const groupId = note.group?._id ?? note.group;
-  if (!groupId) return;
+  const followersOnly = !groupId && note.visibility === 'followers';
+  if (!groupId && !followersOnly) return;
+
   const authorId = note.author?._id ?? note.author;
   if (viewerId && authorId?.equals(viewerId)) return;
 
-  const isMember = viewerId && (await Group.exists({ _id: groupId, members: viewerId }));
-  if (!isMember) throw new ApiError(404, 'Note not found.');
+  const allowed = groupId
+    ? viewerId && (await Group.exists({ _id: groupId, members: viewerId }))
+    : viewerId && (await User.exists({ _id: viewerId, following: authorId }));
+  if (!allowed) throw new ApiError(404, 'Note not found.');
 };
 
 // Filtre + sıralama + sayfalama ile not kartlarını ve toplam sayıyı döndürür.
-// includeGroupNotes: grup sayfası için (üyelik kontrolü önceden yapılır); aksi halde sadece genel notlar listelenir.
+// includeGroupNotes: grup sayfası için (üyelik kontrolü önceden yapılır); aksi halde izleyicinin görebileceği
+// grupsuz notlar listelenir (herkese açık + takip ettiklerinin "sadece takipçiler" notları + kendi notları).
 const listNotes = async ({ match = {}, sort = 'newest', page, limit, skip, viewerId, includeGroupNotes = false }) => {
-  const fullMatch = includeGroupNotes ? match : { $and: [match, PUBLIC_NOTES_MATCH] };
-  // Kartlardaki yer imi durumu için izleyicinin kaydettiği notlar.
-  const savedIds = viewerId ? ((await User.findById(viewerId).select('savedNotes').lean())?.savedNotes ?? []) : [];
+  // Kartlardaki yer imi durumu ve takipçi görünürlüğü için izleyicinin kaydettikleri ve takip ettikleri.
+  const viewer = viewerId ? await User.findById(viewerId).select('savedNotes following').lean() : null;
+  const savedIds = viewer?.savedNotes ?? [];
+  const fullMatch = includeGroupNotes ? match : { $and: [match, visibleNotesMatch(viewerId, viewer?.following)] };
   const [result] = await Note.aggregate([
     { $match: fullMatch },
     { $addFields: { likesCount: { $size: '$likes' } } },

@@ -7,7 +7,7 @@ import EmptyState from '@/components/common/EmptyState';
 import { useGetNoteQuery, useUpdateNoteMutation } from '@/services/notesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 
-const EDITABLE = ['title', 'description', 'courseName', 'courseCode', 'instructorName', 'semester', 'university', 'department'];
+const EDITABLE = ['title', 'description', 'courseName', 'courseCode', 'instructorName', 'semester', 'university', 'department', 'visibility'];
 
 export default function EditNotePage() {
   const { id } = useParams();
@@ -46,6 +46,8 @@ export default function EditNotePage() {
         <NoteForm
           initialValues={Object.fromEntries(EDITABLE.map((k) => [k, note[k] ?? '']))}
           withFile={false}
+          // Gruba paylaşılmış notun görünürlüğünü grup belirler.
+          allowVisibility={!note.group}
           onSubmit={handleSubmit}
           isLoading={saving}
           submitLabel="Save Changes"

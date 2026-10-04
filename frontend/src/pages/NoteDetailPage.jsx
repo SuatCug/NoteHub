@@ -7,6 +7,7 @@ import Spinner from '@/components/common/Spinner';
 import Alert from '@/components/common/Alert';
 import EmptyState from '@/components/common/EmptyState';
 import FileTypeBadge from '@/components/notes/FileTypeBadge';
+import VisibilityBadge from '@/components/notes/VisibilityBadge';
 import NotePreview from '@/components/notes/NotePreview';
 import CommentSection from '@/components/notes/CommentSection';
 import UserAvatar from '@/components/users/UserAvatar';
@@ -119,6 +120,7 @@ export default function NoteDetailPage() {
     <PageLayout>
       <div className="flex flex-wrap items-center gap-2 mb-1">
         <FileTypeBadge type={note.fileType} />
+        <VisibilityBadge visibility={note.visibility} />
         <span className="text-sm text-gray-500">{formatDate(note.createdAt)}</span>
         {note.group && (
           <Link

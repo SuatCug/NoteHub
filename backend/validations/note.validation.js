@@ -13,6 +13,7 @@ const noteFieldRules = (isUpdate) => {
     body('courseCode').optional().trim().isLength({ max: 20 }).withMessage('Course code can be at most 20 characters.'),
     body('instructorName').optional().trim().isLength({ max: 100 }),
     body('semester').optional().trim().isLength({ max: 40 }),
+    body('visibility').optional().isIn(['public', 'followers']).withMessage('Visibility must be public or followers.'),
   ];
 };
 

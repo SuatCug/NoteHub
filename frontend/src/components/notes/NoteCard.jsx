@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Download, Heart, MessageCircle } from 'lucide-react';
 import FileTypeBadge from './FileTypeBadge';
+import VisibilityBadge from './VisibilityBadge';
 import UserAvatar from '@/components/users/UserAvatar';
 import { formatCount, timeAgo } from '@/lib/format';
 
@@ -11,7 +12,10 @@ export default function NoteCard({ note, index = 0 }) {
       style={{ animationDelay: `${Math.min(index, 12) * 60}ms` }}
     >
       <div className="flex items-center justify-between gap-2">
-        <FileTypeBadge type={note.fileType} />
+        <span className="flex items-center gap-1.5">
+          <FileTypeBadge type={note.fileType} />
+          <VisibilityBadge visibility={note.visibility} />
+        </span>
         {note.courseCode && (
           <span className="text-xs font-bold tracking-wide text-navy-600 bg-navy-50 rounded-md px-2 py-0.5">
             {note.courseCode}

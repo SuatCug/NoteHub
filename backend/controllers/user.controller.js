@@ -48,9 +48,12 @@ const getProfile = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
   if (!user) throw new ApiError(404, 'User not found.');
 
+  // Profil istatistikleri grupsuz notlardan hesaplanır; "sadece takipçiler" notları kişinin kendisine ve
+  // takipçilerine sayılır (profilde listelenen notlarla tutarlı olsun diye).
+  const canSeeFollowersNotes =
+    req.user && (req.user.id === user._id.toString() || user.followers.some((id) => id.equals(req.user.id)));
   const [stats] = await Note.aggregate([
-    // Profil istatistikleri sadece genel notlardan hesaplanır (grup notları profilde görünmez).
-    { $match: { author: user._id, ...PUBLIC_NOTES_MATCH } },
+    { $match: { author: user._id, ...(canSeeFollowersNotes ? { group: null } : PUBLIC_NOTES_MATCH) } },
     {
       $group: {
         _id: null,

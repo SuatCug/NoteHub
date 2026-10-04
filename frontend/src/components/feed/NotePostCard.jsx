@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { Bookmark, Check, Download, Heart, Loader2, MessageCircle, Share2 } from 'lucide-react';
 import FileTypeBadge from '@/components/notes/FileTypeBadge';
+import VisibilityBadge from '@/components/notes/VisibilityBadge';
 import UserAvatar from '@/components/users/UserAvatar';
 import { useRegisterDownloadMutation, useToggleLikeMutation, useToggleSaveMutation } from '@/services/notesApi';
 import { downloadNote } from '@/lib/downloadNote';
@@ -117,7 +118,10 @@ export default function NotePostCard({ note, index = 0 }) {
             {note.instructorName && ` · ${note.instructorName}`}
           </p>
         </div>
-        <FileTypeBadge type={note.fileType} className="shrink-0" />
+        <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center">
+          <VisibilityBadge visibility={note.visibility} />
+          <FileTypeBadge type={note.fileType} />
+        </div>
       </header>
 
       <div className="mt-3">
