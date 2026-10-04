@@ -25,7 +25,10 @@ const initSocket = (httpServer, allowedOrigins) => {
   io.use(async (socket, next) => {
     try {
       const { id } = verifyToken(socket.handshake.auth?.token);
-      if (!(await User.exists({ _id: id }))) return next(new Error('unauthorized'));
+      const user = await User.findById(id).select('isVerified');
+      if (!user) return next(new Error('unauthorized'));
+      // E-postasını doğrulamamış oturumlar anlık sisteme bağlanamaz (doğrulama şartı açıksa).
+      if (!user.hasVerifiedAccess()) return next(new Error('email_not_verified'));
       socket.data.userId = String(id);
       next();
     } catch {

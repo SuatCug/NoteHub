@@ -1,19 +1,29 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { CheckCircle2, Loader2, MailCheck, XCircle } from 'lucide-react';
+import { CheckCircle2, Loader2, LogOut, MailCheck, XCircle } from 'lucide-react';
 import AuthLayout from '@/components/auth/AuthLayout';
 import Alert from '@/components/common/Alert';
-import { useResendVerificationMutation, useVerifyEmailMutation } from '@/services/authApi';
-import { setUser } from '@/app/authSlice';
+import { useGetMeQuery, useResendVerificationMutation, useVerifyEmailMutation } from '@/services/authApi';
+import { baseApi, SESSION_TAGS } from '@/services/baseApi';
+import { logout, setUser } from '@/app/authSlice';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 
 // İki durum: ?token=... ile gelindiyse doğrulama yapılır; token yoksa "e-postanı kontrol et" ekranı gösterilir.
+// Doğrulanmamış kullanıcı sitede başka bir sayfaya gidemez (bkz. App); bu ekranda bekler, mail bağlantısına
+// başka bir cihazdan/sekmeden tıklarsa durum periyodik kontrolle algılanıp ana sayfaya geçilir.
+const VERIFY_CHECK_INTERVAL_MS = 5000;
+
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const authToken = useSelector((state) => state.auth.token);
   const user = useSelector((state) => state.auth.user);
+  const waitingForVerification = Boolean(!token && authToken && user && !user.isVerified);
+  // Bağlantı başka yerde tıklanırsa yakalamak için oturumdaki kullanıcı birkaç saniyede bir yenilenir.
+  useGetMeQuery(undefined, { skip: !waitingForVerification, pollingInterval: VERIFY_CHECK_INTERVAL_MS });
   const [verifyEmail] = useVerifyEmailMutation();
   const [resend, { isLoading: resending }] = useResendVerificationMutation();
 
@@ -37,6 +47,15 @@ export default function VerifyEmailPage() {
         setStatus('error');
       });
   }, [token, verifyEmail, dispatch, user]);
+
+  const handleLogout = () => {
+    dispatch(logout());
+    dispatch(baseApi.util.invalidateTags(SESSION_TAGS));
+    navigate('/', { replace: true });
+  };
+
+  // Bekleme ekranındayken doğrulandıysa (başka sekme/cihaz) doğrudan siteye geçilir.
+  if (status === 'pending' && authToken && user?.isVerified) return <Navigate to="/" replace />;
 
   const handleResend = async () => {
     try {
@@ -95,11 +114,21 @@ export default function VerifyEmailPage() {
                 {resending ? 'Sending...' : 'Resend link'}
               </button>
             )}
-            <p className="mt-6 text-sm">
-              <Link to="/" className="text-navy-600 hover:text-navy-700 font-semibold">
-                Browse notes for now →
-              </Link>
-            </p>
+            {user && !user.isVerified && (
+              <>
+                <p className="mt-4 text-xs text-gray-400">
+                  You need to verify your email to use SearchNote. This page continues automatically once you click the
+                  link. Can't find it? Check your spam or junk folder.
+                </p>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-800"
+                >
+                  <LogOut size={15} /> Log out
+                </button>
+              </>
+            )}
           </>
         )}
 

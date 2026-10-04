@@ -64,5 +64,27 @@ const optionalAuth = asyncHandler(async (req, res, next) => {
   next();
 });
 
+// E-postasını doğrulamamış oturumların içerik endpoint'lerine erişimini tamamen kapatır (doğrulama şartı açıksa).
+// Token yoksa ya da geçersizse dokunmaz; ilgili route kendi kuralını (ziyaretçi / giriş gerekli) uygular.
+// Doğrulama ekranının ihtiyacı olan /auth endpoint'leri bu kontrolün dışındadır (bkz. routes/index.js).
+const blockUnverified = asyncHandler(async (req, res, next) => {
+  const token = getBearerToken(req);
+  if (!token) return next();
+
+  let decoded;
+  try {
+    decoded = verifyToken(token);
+  } catch (error) {
+    return next();
+  }
+
+  const user = await User.findById(decoded.id).select('isVerified');
+  if (user && !user.hasVerifiedAccess()) {
+    throw new ApiError(403, 'Please verify your email address to continue.');
+  }
+  next();
+});
+
 module.exports = authenticate;
 module.exports.optionalAuth = optionalAuth;
+module.exports.blockUnverified = blockUnverified;

@@ -1,6 +1,6 @@
 import { Link, NavLink, useLocation, useSearchParams } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Bookmark, Compass, Home, MessageCircle, Upload, UserRound, Users } from 'lucide-react';
+import { Bookmark, Compass, Home, MessageCircle, UserRound, Users } from 'lucide-react';
 import UserAvatar from '@/components/users/UserAvatar';
 import { useGetUnreadCountQuery } from '@/services/messagesApi';
 import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
@@ -63,9 +63,6 @@ export default function FeedSidebar() {
         <UserRound size={20} /> Profile
       </NavLink>
 
-      <Link to="/upload" className="btn-primary mt-4 w-full py-3 rounded-xl">
-        <Upload size={17} /> Upload Note
-      </Link>
     </nav>
   );
 }

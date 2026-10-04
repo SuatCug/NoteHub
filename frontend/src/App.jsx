@@ -46,13 +46,22 @@ function GuestOnly({ children }) {
 
 export default function App() {
   const token = useSelector((state) => state.auth.token);
+  const user = useSelector((state) => state.auth.user);
+  const location = useLocation();
   // Uygulama açılışında kullanıcı bilgisini tazeler (örn. başka sekmede e-posta doğrulandıysa).
   useGetMeQuery(undefined, { skip: !token });
+
+  // E-postasını doğrulamamış kullanıcı sitede gezemez: her adres doğrulama ekranına yönlendirilir
+  // (doğrulama şartı kapalıyken backend herkesi doğrulanmış döndürdüğü için bu kural devreye girmez).
+  const mustVerify = Boolean(token && user && !user.isVerified);
+  if (mustVerify && location.pathname !== '/verify-email') {
+    return <Navigate to="/verify-email" replace />;
+  }
 
   return (
     <>
       <ScrollToTop />
-      <RealtimeBridge />
+      {!mustVerify && <RealtimeBridge />}
       <Routes>
         {/* Anonim ziyaretçilere açık */}
         <Route path="/" element={<HomePage />} />
