@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import ScrollToTop from '@/components/ScrollToTop';
+import RealtimeBridge from '@/components/RealtimeBridge';
 import { useGetMeQuery } from '@/services/authApi';
 import LoginPage from '@/pages/LoginPage';
 import RegisterPage from '@/pages/RegisterPage';
@@ -51,6 +52,7 @@ export default function App() {
   return (
     <>
       <ScrollToTop />
+      <RealtimeBridge />
       <Routes>
         {/* Anonim ziyaretçilere açık */}
         <Route path="/" element={<HomePage />} />

@@ -15,8 +15,9 @@ import {
 import { useGetNoteQuery } from '@/services/notesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 import { timeAgo } from '@/lib/format';
+import { useFallbackPolling } from '@/lib/socket';
 
-// Açık konuşma yeni mesajlar için periyodik olarak yoklanır (sekme arka plandayken yoklama durur).
+// Yeni mesajlar Socket.io ile anında gelir; bağlantı yoksa açık konuşma bu aralıkla yoklanır.
 const POLL_INTERVAL_MS = 5000;
 
 // Birebir sohbet paneli. ?note=<id> ile açıldıysa ("Ask the author") not, gönderilecek mesaja iliştirilir.
@@ -27,7 +28,7 @@ export default function ChatPanel({ conversationId }) {
   const attachedNoteId = searchParams.get('note');
 
   const { data, isLoading, error } = useGetConversationQuery(conversationId, {
-    pollingInterval: POLL_INTERVAL_MS,
+    pollingInterval: useFallbackPolling(POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
   });
   const attachedNote = useGetNoteQuery(attachedNoteId, { skip: !attachedNoteId });

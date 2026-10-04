@@ -10,6 +10,7 @@ const { wordSearchMatch } = require('../utils/regex.util');
 const { getExtension, matchesSignature } = require('../utils/fileTypes.util');
 const { isBlockedBetween } = require('../services/block.service');
 const { notify, removeNotification } = require('../services/notification.service');
+const { getOnlineUserIds } = require('../services/realtime.service');
 
 const USER_CARD_FIELDS = 'fullName avatarUrl university department';
 
@@ -107,17 +108,16 @@ const excludeSelfAndBlocked = (me) => ({
   blockedUsers: { $ne: me._id },
 });
 
-const ACTIVE_WINDOW_MS = 15 * 60 * 1000;
-
-// "Active now": karşılıklı takipleşilen kişilerden son 15 dakikada istek atanlar.
+// "Active now": karşılıklı takipleşilen kişilerden şu an Socket.io ile bağlı (uygulamayı açık tutan) olanlar.
 const getActiveUsers = asyncHandler(async (req, res) => {
   const me = await User.findById(req.user.id).select('following blockedUsers');
   const base = excludeSelfAndBlocked(me);
+  const online = getOnlineUserIds().map((id) => new mongoose.Types.ObjectId(id));
   const match = {
-    ...base,
-    _id: { ...base._id, $in: me.following }, // benim takip ettiklerim...
+    blockedUsers: base.blockedUsers,
+    // kendim/engellediklerim hariç, takip ettiğim ve şu an çevrimiçi olanlar...
+    $and: [{ _id: base._id }, { _id: { $in: me.following } }, { _id: { $in: online } }],
     following: me._id, // ...ve beni takip edenler
-    lastActiveAt: { $gte: new Date(Date.now() - ACTIVE_WINDOW_MS) },
   };
 
   const [users, total] = await Promise.all([

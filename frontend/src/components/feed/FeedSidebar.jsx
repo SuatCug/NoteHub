@@ -4,6 +4,7 @@ import { Bookmark, Compass, Home, MessageCircle, Upload, UserRound, Users } from
 import UserAvatar from '@/components/users/UserAvatar';
 import { useGetUnreadCountQuery } from '@/services/messagesApi';
 import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
+import { useFallbackPolling } from '@/lib/socket';
 
 const itemClass = (active) =>
   `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium transition-colors ${
@@ -16,7 +17,7 @@ export default function FeedSidebar() {
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { data } = useGetUnreadCountQuery(undefined, {
-    pollingInterval: UNREAD_POLL_INTERVAL_MS,
+    pollingInterval: useFallbackPolling(UNREAD_POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
   });
   const unread = data?.data?.count ?? 0;

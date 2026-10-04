@@ -3,6 +3,7 @@ const ApiError = require('../utils/apiError');
 const { User, Note, Conversation, DirectMessage } = require('../models');
 const { assertNoteVisible } = require('../services/note.service');
 const { isBlockedBetween } = require('../services/block.service');
+const { emitToUsers } = require('../services/realtime.service');
 
 const USER_CARD_FIELDS = 'fullName avatarUrl university department';
 const NOTE_CARD_FIELDS = 'title courseCode courseName fileType';
@@ -117,6 +118,8 @@ const getConversation = asyncHandler(async (req, res) => {
   const markedRead = unreadFor(conversation, me) > 0;
   if (markedRead) {
     await Conversation.updateOne({ _id: conversation._id }, { $set: { [`unreadCounts.${me}`]: 0 } });
+    // Kullanıcının diğer sekmelerindeki okunmamış rozeti de düşsün.
+    emitToUsers(me, 'message:changed', { conversationId: String(conversation._id) });
   }
 
   res.json({
@@ -176,6 +179,8 @@ const sendMessage = asyncHandler(async (req, res) => {
   );
 
   await message.populate('note', NOTE_CARD_FIELDS);
+  // İki tarafın da açık sekmeleri konuşmayı ve okunmamış sayısını anında yeniler.
+  emitToUsers([me, otherId], 'message:changed', { conversationId: String(conversation._id) });
   res.status(201).json({ success: true, data: { message: toMessageJSON(message) } });
 });
 
@@ -208,6 +213,7 @@ const deleteMessage = asyncHandler(async (req, res) => {
   const otherUnread = unreadFor(conversation, otherId);
   if (otherUnread > 0) update.$set = { ...update.$set, [`unreadCounts.${otherId}`]: otherUnread - 1 };
   await Conversation.updateOne({ _id: conversation._id }, update);
+  emitToUsers([me, otherId], 'message:changed', { conversationId: String(conversation._id) });
 
   res.json({ success: true, message: 'Message deleted.' });
 });

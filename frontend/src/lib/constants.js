@@ -33,5 +33,5 @@ export const EDU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.edu\.tr$/;
 export const REQUIRE_EDU_EMAIL = import.meta.env.VITE_REQUIRE_EDU_EMAIL === 'true';
 export const EMAIL_PLACEHOLDER = REQUIRE_EDU_EMAIL ? 'ad.soyad@universite.edu.tr' : 'ornek@eposta.com';
 
-// Okunmamış mesaj rozeti bu aralıkla yenilenir (sekme arka plandayken durur).
+// Socket bağlantısı yokken okunmamış rozetleri ve bildirimler bu aralıkla yoklanır (normalde anlık gelir).
 export const UNREAD_POLL_INTERVAL_MS = 30000;

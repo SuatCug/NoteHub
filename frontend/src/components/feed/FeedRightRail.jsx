@@ -6,6 +6,7 @@ import FollowButton from '@/components/users/FollowButton';
 import { useGetActiveUsersQuery, useGetSuggestionsQuery } from '@/services/usersApi';
 import { useGetTrendingCoursesQuery } from '@/services/notesApi';
 import { courseLink } from '@/lib/links';
+import { useFallbackPolling } from '@/lib/socket';
 
 const ACTIVE_POLL_INTERVAL_MS = 60000;
 
@@ -84,7 +85,7 @@ function PopularCoursesCard() {
 
 function ActiveNowCard() {
   const { data, isLoading } = useGetActiveUsersQuery(undefined, {
-    pollingInterval: ACTIVE_POLL_INTERVAL_MS,
+    pollingInterval: useFallbackPolling(ACTIVE_POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
   });
   const users = data?.data?.users ?? [];

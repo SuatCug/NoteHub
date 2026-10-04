@@ -6,6 +6,7 @@ import AvatarMenu from './AvatarMenu';
 import NotificationBell from './NotificationBell';
 import { useGetUnreadCountQuery } from '@/services/messagesApi';
 import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
+import { useFallbackPolling } from '@/lib/socket';
 
 function SearchInput({ value, onChange, placeholder }) {
   return (
@@ -94,7 +95,7 @@ export default function Navbar() {
 
 function MessagesLink({ hideOnLarge = false }) {
   const { data } = useGetUnreadCountQuery(undefined, {
-    pollingInterval: UNREAD_POLL_INTERVAL_MS,
+    pollingInterval: useFallbackPolling(UNREAD_POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
   });
   const count = data?.data?.count ?? 0;

@@ -19,7 +19,7 @@ export const usersApi = baseApi.injectEndpoints({
     }),
     getActiveUsers: builder.query({
       query: () => '/users/active',
-      providesTags: ['User'],
+      providesTags: ['User', 'ActiveUsers'],
     }),
     getSuggestions: builder.query({
       query: () => '/users/suggestions',

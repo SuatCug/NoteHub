@@ -12,15 +12,16 @@ import {
 } from '@/services/groupsApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 import { timeAgo } from '@/lib/format';
+import { joinGroupRoom, leaveGroupRoom, useFallbackPolling } from '@/lib/socket';
 
-// Yeni mesajlar için sunucu periyodik olarak yoklanır (sekme arka plandayken yoklama durur).
+// Yeni mesajlar Socket.io grup odasından anında gelir; bağlantı yoksa sunucu bu aralıkla yoklanır.
 const POLL_INTERVAL_MS = 5000;
 
 // Grup sohbeti: sadece üyelere gösterilir. Son 100 mesaj listelenir.
 export default function GroupChat({ groupId, isOwner }) {
   const me = useSelector((state) => state.auth.user);
   const { data, isLoading, error } = useGetGroupMessagesQuery(groupId, {
-    pollingInterval: POLL_INTERVAL_MS,
+    pollingInterval: useFallbackPolling(POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
   });
   const [sendMessage, { isLoading: sending }] = useSendGroupMessageMutation();
@@ -28,6 +29,12 @@ export default function GroupChat({ groupId, isOwner }) {
   const [text, setText] = useState('');
   const [sendError, setSendError] = useState('');
   const listRef = useRef(null);
+
+  // Sohbet açıkken grubun socket odasına katılınır; yeni mesaj olayı gelince liste yenilenir (bkz. RealtimeBridge).
+  useEffect(() => {
+    joinGroupRoom(groupId);
+    return () => leaveGroupRoom(groupId);
+  }, [groupId]);
 
   const messages = data?.data?.messages;
   const lastId = messages?.at(-1)?._id;

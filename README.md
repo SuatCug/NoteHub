@@ -3,7 +3,7 @@
 # SearchNote 📚
 
 **Üniversite öğrencilerinin ders notlarını paylaştığı, başkalarının notlarını
-keşfettiği ve aynı dersleri çalışan insanlarla bağ kurduğu; sosyal akış, bildirimler,
+keşfettiği ve aynı dersleri çalışan insanlarla bağ kurduğu; sosyal akış, anlık bildirimler,
 birebir mesajlaşma ve çalışma gruplarıyla birlikte gelen bir not paylaşım platformu.**
 
 [Özellikler](#-özellikler) · [Ekran görüntüleri](#-ekran-görüntüleri) · [Teknolojiler](#-kullanılan-teknolojiler) · [Kurulum](#-yerelde-çalıştırma) · [Deploy](#️-deploy)
@@ -13,6 +13,7 @@ birebir mesajlaşma ve çalışma gruplarıyla birlikte gelen bir not paylaşım
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=black)
 ![Vite](https://img.shields.io/badge/Vite-8-646CFF?style=flat&logo=vite&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat&logo=mongodb&logoColor=white)
+![Socket.io](https://img.shields.io/badge/Socket.io-010101?style=flat&logo=socket.io&logoColor=white)
 ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38B2AC?style=flat&logo=tailwind-css&logoColor=white)
 ![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-764ABC?style=flat&logo=redux&logoColor=white)
 ![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=flat&logo=cloudinary&logoColor=white)
@@ -59,8 +60,14 @@ ziyaretçiye de açılır, böylece paylaşılan linkler kırılmaz.
 - Gönderi kartlarında beğenme, yorum, indirme, paylaşma (bağlantı kopyalama / Web Share API) ve kaydetme;
   beğeni ve kaydetme iyimser (optimistic) güncellenir
 - **Popular Courses:** not sayısı ve beğeniye göre öne çıkan dersler
-- **Active Now:** karşılıklı takipleşilen kişilerden son 15 dakikada aktif olanlar
+- **Active Now:** karşılıklı takipleşilen kişilerden şu an çevrimiçi olanlar (Socket.io ile canlı)
 - **Who to Follow:** aynı üniversite/bölümdekiler öncelikli takip önerileri
+
+**⚡ Anlık sistem (Socket.io)**
+- JWT ile doğrulanan Socket.io bağlantısı; her kullanıcı kendi odasına, grup sohbetleri üyelere özel odalara bağlanır
+- Birebir mesajlar, grup sohbeti, bildirimler ve okunmamış rozetleri sayfa yenilenmeden anında güncellenir
+- **Active Now:** çevrimiçi durumu socket bağlantılarından canlı takip edilir; kişi uygulamayı kapatınca listeden anında düşer
+- Olaylar yalnızca "değişti" sinyali taşır, veri yetki kontrollü REST API'den çekilir; bağlantı koparsa polling yedeğe geçer ve yeniden bağlanınca kaçan olaylar senkronlanır
 
 **🔔 Bildirimler**
 - Beğeni, yorum, yeni takipçi, gruba katılım, özel gruba katılma isteği ve isteğin onaylanması
@@ -110,8 +117,8 @@ ziyaretçiye de açılır, böylece paylaşılan linkler kırılmaz.
 
 | | |
 |---|---|
-| **Frontend** | React 19, Vite 8, Redux Toolkit + RTK Query, React Router 7, Tailwind CSS 4, lucide-react, pdf.js (pdfjs-dist), oxlint |
-| **Backend** | Node.js, Express 5, MongoDB + Mongoose, JWT (jsonwebtoken), bcryptjs, express-validator, Multer, helmet, morgan, cors, Nodemailer, dotenv |
+| **Frontend** | React 19, Vite 8, Redux Toolkit + RTK Query, React Router 7, Tailwind CSS 4, Socket.io Client, lucide-react, pdf.js (pdfjs-dist), oxlint |
+| **Backend** | Node.js, Express 5, MongoDB + Mongoose, Socket.io, JWT (jsonwebtoken), bcryptjs, express-validator, Multer, helmet, morgan, cors, Nodemailer, dotenv |
 | **Depolama** | Cloudinary (yapılandırılmamışsa `backend/uploads` yerel disk) |
 | **Deploy** | Netlify (frontend) · Render (backend) · MongoDB Atlas (veritabanı) |
 
@@ -119,19 +126,20 @@ ziyaretçiye de açılır, böylece paylaşılan linkler kırılmaz.
 
 ```
 proje4/
-├── backend/                 # Express 5 API
+├── backend/                 # Express 5 API + Socket.io
 │   ├── config/              # MongoDB bağlantısı, özellik anahtarları (features.js)
 │   ├── controllers/         # auth, note, comment, user, group, message, notification, stats, contact
 │   ├── middlewares/         # auth, verified, validate, upload (multer), rateLimit, error
 │   ├── models/              # User, Note, Group, GroupMessage, Conversation, DirectMessage,
 │   │                        # Notification, ContactMessage (Mongoose)
 │   ├── routes/              # /api/* uç tanımları
-│   ├── services/            # storage (Cloudinary/disk), notification, note, group, block, mail
+│   ├── services/            # realtime (socket emit + çevrimiçi durum), storage, notification, note, group, block, mail
+│   ├── sockets/             # Socket.io sunucusu: JWT el sıkışması, kullanıcı/grup odaları, presence
 │   ├── scripts/             # seed.js (demo veri), migrateToCloudinary.js
 │   ├── validations/         # express-validator kural setleri
 │   ├── utils/               # jwt, pagination, regex (kelime bazlı arama), dosya imzası kontrolü
 │   ├── uploads/             # yerel dosya deposu (Cloudinary kapalıyken)
-│   └── index.js             # sunucu girişi
+│   └── index.js             # sunucu girişi (HTTP + Socket.io aynı portta)
 ├── frontend/                # React (Vite) istemcisi
 │   ├── public/              # favicon, _redirects (Netlify SPA yönlendirmesi)
 │   └── src/
@@ -147,7 +155,7 @@ proje4/
 │       │                    # Upload/Edit, About, Help, Contact, Legal ...
 │       ├── services/        # RTK Query API dilimleri (auth, notes, users, groups, messages,
 │       │                    # notifications, stats, contact)
-│       └── lib/             # sabitler, biçimlendirme, indirme yardımcıları
+│       └── lib/             # socket istemcisi, sabitler, biçimlendirme, indirme yardımcıları
 └── docs/screenshots/        # README ekran görüntüleri
 ```
 
@@ -250,9 +258,20 @@ Tüm uçlar `/api` önekiyle sunulur. `🔒` kimlik doğrulama (`Authorization: 
 | `GET` | `/stats` | Herkese açık topluluk sayaçları (tanıtım sayfası) |
 | `POST` | `/contact` | İletişim formu |
 
-**Gerçek zamanlılık:** Mesajlaşma (5 sn), konuşma listesi (10 sn), grup sohbeti (5 sn),
-okunmamış rozetleri ve bildirimler (30 sn) ile aktif kullanıcılar (60 sn), WebSocket yerine
-periyodik sorgulama (polling) ile güncellenir; sekme arka plandayken sorgulama durur.
+### ⚡ Socket.io olayları
+
+Bağlantı `io(API_ORIGIN, { auth: { token } })` ile kurulur; el sıkışmada JWT doğrulanır, geçersiz token reddedilir.
+
+| Yön | Olay | Açıklama |
+|---|---|---|
+| sunucu → istemci | `notifications:changed` | Yeni / silinen / okunan bildirim (zil rozeti ve liste yenilenir) |
+| sunucu → istemci | `message:changed` | Konuşmada yeni / silinen mesaj ya da okundu bilgisi (`{ conversationId }`) |
+| sunucu → istemci | `group:message` | Grup sohbetinde yeni / silinen mesaj (`{ groupId }`) |
+| sunucu → istemci | `presence:changed` | Takip edilen biri çevrimiçi / çevrimdışı oldu |
+| istemci → sunucu | `group:join` · `group:leave` | Grup sohbeti odasına katılma (üyelik kontrollü, ack döner) / ayrılma |
+
+Socket bağlı değilken mesajlar (5 sn), konuşma listesi (10 sn), rozetler/bildirimler (30 sn) ve aktif
+kullanıcılar (60 sn) yedek olarak polling ile yenilenir.
 
 ## ☁️ Deploy
 
@@ -271,7 +290,8 @@ periyodik sorgulama (polling) ile güncellenir; sekme arka plandayken sorgulama 
   aksi halde CORS hatası alınır. Sunucu açılışta izin verilen origin'leri loglar.
 - Render'ın ücretsiz planında servis bir süre istek almazsa uyur; ilk istek 30–60 saniye sürebilir.
 - Sunucusuz/çok örnekli ortamlarda dosya deposu olarak Cloudinary kullanılmalı (yerel disk kalıcı değildir);
-  mesaj hız sınırı bellekte tutulduğu için birden fazla örnekte Redis gibi paylaşımlı bir depo gerekir.
+  mesaj hız sınırı ve çevrimiçi kullanıcı listesi bellekte tutulduğu için birden fazla örnekte Redis
+  (ve Socket.io Redis adapter'ı) gibi paylaşımlı bir depo gerekir.
 
 ## 📄 Lisans
 

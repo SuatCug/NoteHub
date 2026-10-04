@@ -1,4 +1,5 @@
 require('dotenv').config();
+const http = require('http');
 const path = require('path');
 const express = require('express');
 const cors = require('cors');
@@ -7,6 +8,7 @@ const morgan = require('morgan');
 
 const connectDB = require('./config/db');
 const routes = require('./routes');
+const initSocket = require('./sockets');
 const { notFound, errorHandler } = require('./middlewares/error.middleware');
 
 const app = express();
@@ -39,8 +41,12 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
+// Express ve Socket.io aynı HTTP sunucusunu paylaşır (anlık mesaj, bildirim ve çevrimiçi durum).
+const server = http.createServer(app);
+initSocket(server, allowedOrigins);
+
 connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`🚀 API running at http://localhost:${PORT}`);
+  server.listen(PORT, () => {
+    console.log(`🚀 API + Socket.io running at http://localhost:${PORT}`);
   });
 });

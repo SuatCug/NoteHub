@@ -5,6 +5,7 @@ const { Group, GroupMessage, Note } = require('../models');
 const { listGroups } = require('../services/group.service');
 const { listNotes } = require('../services/note.service');
 const { notify } = require('../services/notification.service');
+const { emitToGroup } = require('../services/realtime.service');
 const { parsePagination } = require('../utils/pagination.util');
 const { wordSearchMatch } = require('../utils/regex.util');
 
@@ -291,6 +292,7 @@ const sendMessage = asyncHandler(async (req, res) => {
 
   const message = await GroupMessage.create({ group: group._id, user: req.user.id, text: req.body.text });
   await message.populate('user', 'fullName avatarUrl');
+  emitToGroup(group._id, 'group:message', { groupId: String(group._id) });
 
   res.status(201).json({ success: true, data: { message } });
 });
@@ -306,6 +308,7 @@ const deleteMessage = asyncHandler(async (req, res) => {
   }
 
   await message.deleteOne();
+  emitToGroup(group._id, 'group:message', { groupId: String(group._id) });
   res.json({ success: true, message: 'Message deleted.' });
 });
 

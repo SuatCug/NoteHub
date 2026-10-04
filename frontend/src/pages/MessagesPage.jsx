@@ -4,15 +4,16 @@ import PageLayout from '@/components/layout/PageLayout';
 import ConversationList from '@/components/messages/ConversationList';
 import ChatPanel from '@/components/messages/ChatPanel';
 import { useGetConversationsQuery } from '@/services/messagesApi';
+import { useFallbackPolling } from '@/lib/socket';
 
-// Konuşma listesi yeni mesajlar için daha seyrek yoklanır (açık sohbet kendi içinde 5 sn'de bir yenilenir).
+// Konuşma listesi Socket.io olaylarıyla anında yenilenir; bağlantı yoksa bu aralıkla yoklanır.
 const LIST_POLL_INTERVAL_MS = 10000;
 
 // /messages: masaüstünde solda konuşmalar, sağda sohbet. Mobilde konuşma seçiliyse sadece sohbet görünür.
 export default function MessagesPage() {
   const { id } = useParams();
   const { data, isLoading, error } = useGetConversationsQuery(undefined, {
-    pollingInterval: LIST_POLL_INTERVAL_MS,
+    pollingInterval: useFallbackPolling(LIST_POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
   });
 

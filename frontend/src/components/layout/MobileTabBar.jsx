@@ -3,6 +3,7 @@ import { useSelector } from 'react-redux';
 import { Home, MessageCircle, Plus, UserRound, Users } from 'lucide-react';
 import { useGetUnreadCountQuery } from '@/services/messagesApi';
 import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
+import { useFallbackPolling } from '@/lib/socket';
 
 const itemClass = ({ isActive }) =>
   `relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-semibold transition-colors ${
@@ -14,7 +15,7 @@ const itemClass = ({ isActive }) =>
 export default function MobileTabBar() {
   const user = useSelector((state) => state.auth.user);
   const { data } = useGetUnreadCountQuery(undefined, {
-    pollingInterval: UNREAD_POLL_INTERVAL_MS,
+    pollingInterval: useFallbackPolling(UNREAD_POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
   });
   const unread = data?.data?.count ?? 0;

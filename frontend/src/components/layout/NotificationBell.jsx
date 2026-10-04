@@ -10,6 +10,7 @@ import {
 } from '@/services/notificationsApi';
 import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
 import { timeAgo } from '@/lib/format';
+import { useFallbackPolling } from '@/lib/socket';
 
 const LIST_LIMIT = 20;
 
@@ -39,7 +40,7 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
 
   const { data: countData } = useGetNotificationCountQuery(undefined, {
-    pollingInterval: UNREAD_POLL_INTERVAL_MS,
+    pollingInterval: useFallbackPolling(UNREAD_POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
   });
   const { data, isLoading } = useGetNotificationsQuery({ limit: LIST_LIMIT }, { skip: !open });

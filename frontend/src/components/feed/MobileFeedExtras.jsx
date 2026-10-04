@@ -6,6 +6,7 @@ import FollowButton from '@/components/users/FollowButton';
 import { useGetActiveUsersQuery, useGetSuggestionsQuery } from '@/services/usersApi';
 import { useGetTrendingCoursesQuery } from '@/services/notesApi';
 import { courseLink } from '@/lib/links';
+import { useFallbackPolling } from '@/lib/socket';
 
 // Dar ekranlarda yan paneller gizli olduğu için onların içeriği akışın içine taşınır:
 // kısayollar ve "aktif olanlar" üstte, takip önerileri birkaç gönderiden sonra yatay kaydırmalı kartlar olarak.
@@ -43,7 +44,7 @@ export function MobileShortcuts() {
 // Hikâye (story) şeridi gibi: şu an aktif olan kişiler. Kimse yoksa hiç gösterilmez.
 export function ActiveNowStrip() {
   const { data } = useGetActiveUsersQuery(undefined, {
-    pollingInterval: ACTIVE_POLL_INTERVAL_MS,
+    pollingInterval: useFallbackPolling(ACTIVE_POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
   });
   const users = data?.data?.users ?? [];
