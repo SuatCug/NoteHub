@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { Trash2 } from 'lucide-react';
+import { Send, Trash2 } from 'lucide-react';
 import Alert from '@/components/common/Alert';
+import UserAvatar from '@/components/users/UserAvatar';
 import { useAddCommentMutation, useDeleteCommentMutation } from '@/services/notesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 import { timeAgo } from '@/lib/format';
@@ -43,58 +44,73 @@ export default function CommentSection({ note }) {
         Comments <span className="text-gray-400 font-normal text-base">({note.comments.length})</span>
       </h2>
 
-      <ul className="mt-3 divide-y divide-gray-100">
-        {note.comments.length === 0 && <li className="py-2 text-sm text-gray-400">No comments yet. Be the first to comment.</li>}
-        {note.comments.map((comment) => (
-          <li key={comment._id} className="group py-2.5 flex items-start gap-2">
-            <p className="flex-1 min-w-0 text-sm text-gray-700 break-words whitespace-pre-line">
-              <Link to={`/users/${comment.user?._id}`} className="font-semibold text-gray-900 hover:text-navy-600">
-                {comment.user?.fullName ?? 'Deleted user'}
-              </Link>
-              : {comment.text}
-              <span className="block text-xs text-gray-400 mt-0.5">{timeAgo(comment.createdAt)}</span>
-            </p>
-            {canDelete(comment) && (
-              <button
-                type="button"
-                onClick={() => handleDelete(comment._id)}
-                className="p-1 rounded text-gray-300 hover:text-rose-500 opacity-0 group-hover:opacity-100 focus:opacity-100 pointer-coarse:opacity-100 transition-opacity"
-                aria-label="Delete comment"
-              >
-                <Trash2 size={14} />
-              </button>
-            )}
-          </li>
-        ))}
-      </ul>
-
+      {/* Yorum yazma alanı listenin üstünde: yeni yorum hemen görünür, uzun listede aşağı kaydırmak gerekmez. */}
       {!user ? (
-        <p className="mt-3 text-sm text-gray-500">
+        <p className="mt-4 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-500">
           <Link to="/login" state={{ from: `/notes/${note._id}` }} className="font-semibold text-navy-600 hover:text-navy-700">
             Log in
           </Link>{' '}
           to leave a comment.
         </p>
       ) : !user.isVerified ? (
-        <p className="mt-3 text-sm text-gray-500">Verify your email address to leave a comment.</p>
+        <p className="mt-4 rounded-xl bg-gray-50 px-4 py-3 text-sm text-gray-500">
+          Verify your email address to leave a comment.
+        </p>
       ) : (
-        <form onSubmit={handleSubmit} className="mt-3">
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={3}
-            maxLength={1000}
-            placeholder="Write a comment..."
-            className="form-input resize-y text-sm"
-            aria-label="Comment"
-          />
-          <div className="mt-2 flex justify-end">
-            <button type="submit" disabled={adding || !text.trim()} className="btn-primary py-2">
-              {adding ? 'Sending...' : 'Comment'}
-            </button>
+        <form onSubmit={handleSubmit} className="mt-4 flex items-start gap-3">
+          <UserAvatar user={user} size="sm" className="mt-1" />
+          <div className="min-w-0 flex-1">
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={2}
+              maxLength={1000}
+              placeholder="Write a comment..."
+              className="form-input resize-y text-sm"
+              aria-label="Comment"
+            />
+            <div className="mt-2 flex justify-end">
+              <button type="submit" disabled={adding || !text.trim()} className="btn-primary py-2">
+                <Send size={15} /> {adding ? 'Sending...' : 'Comment'}
+              </button>
+            </div>
           </div>
         </form>
       )}
+
+      <ul className="mt-4 space-y-4">
+        {note.comments.length === 0 && (
+          <li className="py-6 text-center text-sm text-gray-400">No comments yet. Be the first to comment.</li>
+        )}
+        {/* En yeni yorum üstte */}
+        {[...note.comments].reverse().map((comment) => (
+          <li key={comment._id} className="group flex items-start gap-3">
+            <Link to={`/users/${comment.user?._id}`} className="shrink-0">
+              <UserAvatar user={comment.user} size="sm" />
+            </Link>
+            <div className="min-w-0 flex-1">
+              <div className="rounded-2xl rounded-tl-sm bg-gray-50 px-4 py-2.5">
+                <Link to={`/users/${comment.user?._id}`} className="text-sm font-semibold text-gray-900 hover:text-navy-600">
+                  {comment.user?.fullName ?? 'Deleted user'}
+                </Link>
+                <p className="mt-0.5 text-sm leading-relaxed text-gray-700 break-words whitespace-pre-line">{comment.text}</p>
+              </div>
+              <div className="mt-1 flex items-center gap-3 px-2 text-xs text-gray-400">
+                {timeAgo(comment.createdAt)}
+                {canDelete(comment) && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(comment._id)}
+                    className="inline-flex items-center gap-1 font-medium hover:text-rose-500 opacity-0 group-hover:opacity-100 focus:opacity-100 pointer-coarse:opacity-100 transition-opacity"
+                  >
+                    <Trash2 size={12} /> Delete
+                  </button>
+                )}
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
 
       <Alert className="mt-3">{error}</Alert>
     </section>

@@ -3,8 +3,7 @@ import { useSelector } from 'react-redux';
 import { BadgeCheck, HeartHandshake, Lock, Sparkles, Upload, Users } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PageHeader from '@/components/layout/PageHeader';
-import { useGetNotesQuery } from '@/services/notesApi';
-import { useGetGroupsQuery } from '@/services/groupsApi';
+import { useGetStatsQuery } from '@/services/statsApi';
 import { formatCount } from '@/lib/format';
 
 const VALUES = [
@@ -32,12 +31,12 @@ const VALUES = [
 
 export default function AboutPage() {
   const token = useSelector((state) => state.auth.token);
-  const notes = useGetNotesQuery({ limit: 1 });
-  const groups = useGetGroupsQuery({ limit: 1 });
+  // Not listesi ziyaretçiye kapalı olduğu için sayılar herkese açık /stats endpoint'inden alınır.
+  const { data } = useGetStatsQuery();
 
   const stats = [
-    { label: 'Notes shared', value: notes.data?.data?.pagination?.total },
-    { label: 'Study groups', value: groups.data?.data?.pagination?.total },
+    { label: 'Notes shared', value: data?.data?.notes },
+    { label: 'Study groups', value: data?.data?.groups },
     { label: 'Download cost', value: '₺0' },
   ];
 
@@ -48,8 +47,8 @@ export default function AboutPage() {
         title="By students, for students."
         text="SearchNote started with a simple idea: the best study materials are often sitting in a classmate's notebook. We built a place where university students can share class notes, slides and past exams — and find exactly what they need, for free."
       >
-        <Link to="/" className="btn-primary bg-white text-navy-700 hover:bg-navy-50">
-          Browse notes
+        <Link to={token ? '/?all=1' : '/#how-it-works'} className="btn-primary bg-white text-navy-700 hover:bg-navy-50">
+          {token ? 'Browse notes' : 'How it works'}
         </Link>
         <Link
           to={token ? '/upload' : '/register'}

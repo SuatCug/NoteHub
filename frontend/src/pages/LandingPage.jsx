@@ -23,7 +23,6 @@ import Footer from '@/components/layout/Footer';
 import { useGetStatsQuery } from '@/services/statsApi';
 
 // Giriş yapmamış ziyaretçilere ana sayfada gösterilen tanıtım sayfası.
-// Footer bağlantılarıyla arama/filtre parametresi taşıyan adrese gelen ziyaretçi normal not listesini (HomePage) görür.
 
 const FEATURES = [
   { icon: FileText, title: 'Note Sharing', text: 'Share your notes in seconds and discover what other students have uploaded.' },

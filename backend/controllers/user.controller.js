@@ -109,16 +109,21 @@ const excludeSelfAndBlocked = (me) => ({
 
 const ACTIVE_WINDOW_MS = 15 * 60 * 1000;
 
-// "Active now": son 15 dakikada istek atan kullanıcılar; takip edilenler öne alınır.
+// "Active now": karşılıklı takipleşilen kişilerden son 15 dakikada istek atanlar.
 const getActiveUsers = asyncHandler(async (req, res) => {
   const me = await User.findById(req.user.id).select('following blockedUsers');
-  const match = { ...excludeSelfAndBlocked(me), lastActiveAt: { $gte: new Date(Date.now() - ACTIVE_WINDOW_MS) } };
+  const base = excludeSelfAndBlocked(me);
+  const match = {
+    ...base,
+    _id: { ...base._id, $in: me.following }, // benim takip ettiklerim...
+    following: me._id, // ...ve beni takip edenler
+    lastActiveAt: { $gte: new Date(Date.now() - ACTIVE_WINDOW_MS) },
+  };
 
   const [users, total] = await Promise.all([
     User.aggregate([
       { $match: match },
-      { $addFields: { isFollowing: { $in: ['$_id', me.following] } } },
-      { $sort: { isFollowing: -1, lastActiveAt: -1 } },
+      { $sort: { lastActiveAt: -1 } },
       { $limit: 8 },
       { $project: { fullName: 1, avatarUrl: 1, university: 1, department: 1 } },
     ]),

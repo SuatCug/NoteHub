@@ -134,7 +134,9 @@ export default function NoteDetailPage() {
         {note.title}
       </h1>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] items-start">
+      {/* Geniş ekranda: solda önizleme ve altında yorumlar, sağda bilgi kartları (iki satıra yayılır).
+          Telefonda sıra: önizleme, bilgi kartları, yorumlar. */}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:grid-rows-[auto_1fr] items-start">
         {/* Sol: önizleme */}
         <section className="card overflow-hidden" aria-labelledby="preview-title">
           <div className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
@@ -183,7 +185,7 @@ export default function NoteDetailPage() {
         </section>
 
         {/* Sağ: bilgi kartları */}
-        <aside className="space-y-5">
+        <aside className="space-y-5 lg:row-span-2">
           <section className="card p-5" aria-labelledby="info-title">
             <h2 id="info-title" className="text-lg font-semibold text-gray-900">
               Note Details
@@ -259,20 +261,30 @@ export default function NoteDetailPage() {
               <p className="mt-2 text-sm text-gray-400">No description added.</p>
             )}
             <div className="mt-4 flex flex-wrap gap-2">
-              {buildTags(note).map((tag) => (
-                <Link
-                  key={tag.label}
-                  to={`/?${new URLSearchParams(tag.params)}`}
-                  className="rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-700 hover:bg-navy-50 hover:text-navy-700 transition-colors"
-                >
-                  {tag.label}
-                </Link>
-              ))}
+              {/* Etiketler aramaya götürür; ziyaretçi arama yapamadığı için onlara düz etiket gösterilir. */}
+              {buildTags(note).map((tag) =>
+                token ? (
+                  <Link
+                    key={tag.label}
+                    to={`/?${new URLSearchParams(tag.params)}`}
+                    className="rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-700 hover:bg-navy-50 hover:text-navy-700 transition-colors"
+                  >
+                    {tag.label}
+                  </Link>
+                ) : (
+                  <span key={tag.label} className="rounded-md bg-gray-100 px-2.5 py-1 text-sm text-gray-700">
+                    {tag.label}
+                  </span>
+                )
+              )}
             </div>
           </section>
-
-          <CommentSection note={note} />
         </aside>
+
+        {/* Sol, önizlemenin altı: yorumlar */}
+        <div className="min-w-0 lg:col-start-1">
+          <CommentSection note={note} />
+        </div>
       </div>
     </PageLayout>
   );

@@ -7,17 +7,27 @@ import { REQUIRE_EDU_EMAIL, SOCIAL_LINKS } from '@/lib/constants';
 
 const YEAR = new Date().getFullYear();
 
+// Platform sütunu oturuma göre değişir: ziyaretçi notları görmediği için karşılama sayfasının
+// bölümlerine ve kayıt / giriş sayfalarına yönlendirilir.
+const PLATFORM_LINKS = {
+  guest: [
+    { to: '/#features', label: 'Features' },
+    { to: '/#how-it-works', label: 'Getting Started' },
+    { to: '/#community', label: 'Community' },
+    { to: '/register', label: 'Create an Account' },
+    { to: '/login', label: 'Log In' },
+  ],
+  member: [
+    { to: '/', label: 'Home Feed' },
+    { to: '/?all=1', label: 'Explore Notes' },
+    { to: '/?sort=popular&all=1', label: 'Most Liked' },
+    { to: '/?tab=saved', label: 'Saved Notes' },
+    { to: '/groups', label: 'Study Groups' },
+    { to: '/upload', label: 'Upload a Note' },
+  ],
+};
+
 const COLUMNS = [
-  {
-    title: 'Platform',
-    links: [
-      { to: '/', label: 'Browse Notes' },
-      { to: '/?sort=popular&all=1', label: 'Most Liked' },
-      { to: '/?sort=downloads&all=1', label: 'Most Downloaded' },
-      { to: '/groups', label: 'Study Groups' },
-      { to: '/upload', label: 'Upload a Note' },
-    ],
-  },
   {
     title: 'Company',
     links: [
@@ -127,7 +137,7 @@ export default function Footer() {
           </div>
 
           <div className="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4">
-            {COLUMNS.map((col) => (
+            {[{ title: 'Platform', links: PLATFORM_LINKS[token ? 'member' : 'guest'] }, ...COLUMNS].map((col) => (
               <nav key={col.title} aria-label={col.title}>
                 <h2 className="text-xs font-semibold uppercase tracking-widest text-navy-200">{col.title}</h2>
                 <ul className="mt-4 space-y-2.5">

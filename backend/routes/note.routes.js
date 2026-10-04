@@ -17,12 +17,13 @@ const {
 
 const verifiedOnly = [authenticate, requireVerified];
 
-// Arama & listeleme (anonim ziyaretçilere açık)
-router.get('/', listNotesRules, validate, optionalAuth, noteController.searchNotes);
-router.get('/filters', noteController.getFilterOptions);
+// Arama & listeleme: sadece giriş yapmış kullanıcılar (ziyaretçi not kataloğunu göremez;
+// paylaşılan tek bir not bağlantısı (GET /:id) ise herkese açıktır).
+router.get('/', listNotesRules, validate, authenticate, noteController.searchNotes);
+router.get('/filters', authenticate, noteController.getFilterOptions);
 router.get('/feed', authenticate, noteController.getFeed);
 router.get('/saved', authenticate, noteController.getSavedNotes);
-router.get('/trending-courses', noteController.getTrendingCourses);
+router.get('/trending-courses', authenticate, noteController.getTrendingCourses);
 router.get('/:id', idParamRules, validate, optionalAuth, noteController.getNote);
 
 // Not yükleme / düzenleme / silme (multipart/form-data, dosya alanı: "file")

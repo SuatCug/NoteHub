@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
 import { MessageCircle, Search, Upload } from 'lucide-react';
 import Logo from './Logo';
 import AvatarMenu from './AvatarMenu';
@@ -25,8 +24,8 @@ function SearchInput({ value, onChange, placeholder }) {
   );
 }
 
+// Giriş yapmış kullanıcının üst çubuğu (ziyaretçi GuestNavbar görür; bkz. PageLayout).
 export default function Navbar() {
-  const token = useSelector((state) => state.auth.token);
   const navigate = useNavigate();
   const location = useLocation();
   // Ana sayfada geniş ekranda sol menü (FeedSidebar) olduğu için oradaki bağlantılar üst çubukta tekrarlanmaz.
@@ -70,44 +69,25 @@ export default function Navbar() {
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Gruplar, mesajlar ve not yükleme ana sayfanın sol menüsünde, telefonda alt sekme çubuğunda,
               diğer sayfalarda hesap menüsünde. Mesajlar ikonu sol menünün olmadığı yerlerde gösterilir. */}
-          {token ? (
-            <>
-              <MessagesLink hideOnLarge={onHome} />
-              <Link
-                to="/upload"
-                title="Upload Note"
-                aria-label="Upload Note"
-                className="hidden md:inline-flex items-center gap-2 rounded-lg bg-white px-3 lg:px-4 py-2 text-sm font-semibold text-navy-900 shadow-sm hover:bg-navy-50 transition-colors"
-              >
-                <Upload size={16} />
-                <span className="hidden lg:inline">Upload Note</span>
-              </Link>
-              <NotificationBell />
-              <AvatarMenu />
-            </>
-          ) : (
-            <>
-              <Link to="/login" className="text-sm font-semibold text-white/90 hover:text-white px-2 py-2">
-                Log In
-              </Link>
-              <Link
-                to="/register"
-                className="rounded-lg bg-white px-3 sm:px-4 py-2 text-sm font-semibold text-navy-900 shadow-sm hover:bg-navy-50 transition-colors whitespace-nowrap"
-              >
-                Sign Up
-              </Link>
-            </>
-          )}
+          <MessagesLink hideOnLarge={onHome} />
+          <Link
+            to="/upload"
+            title="Upload Note"
+            aria-label="Upload Note"
+            className="hidden md:inline-flex items-center gap-2 rounded-lg bg-white px-3 lg:px-4 py-2 text-sm font-semibold text-navy-900 shadow-sm hover:bg-navy-50 transition-colors"
+          >
+            <Upload size={16} />
+            <span className="hidden lg:inline">Upload Note</span>
+          </Link>
+          <NotificationBell />
+          <AvatarMenu />
         </div>
       </div>
 
-      {/* Dar ekranlarda (md altı) arama kutusu ikinci satırda. Ziyaretçi ana sayfasında karşılama alanının
-          kendi büyük arama kutusu olduğu için burada tekrar gösterilmez. */}
-      {!(!token && location.pathname === '/' && !searchParams.toString()) && (
-        <form onSubmit={handleSubmit} className="md:hidden px-4 sm:px-6 pb-3" role="search">
-          <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search notes or people..." />
-        </form>
-      )}
+      {/* Dar ekranlarda (md altı) arama kutusu ikinci satırda. */}
+      <form onSubmit={handleSubmit} className="md:hidden px-4 sm:px-6 pb-3" role="search">
+        <SearchInput value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search notes or people..." />
+      </form>
     </header>
   );
 }

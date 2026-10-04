@@ -109,7 +109,7 @@ function ActiveNowCard() {
           {extra > 0 && <span className="ml-1 text-xs font-medium text-gray-500">+{extra}</span>}
         </div>
       ) : (
-        <p className="text-sm text-gray-500">No one else is online right now.</p>
+        <p className="text-sm text-gray-500">None of your mutual follows are online right now.</p>
       )}
     </RailCard>
   );
