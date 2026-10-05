@@ -6,6 +6,7 @@ import type {
   NoteDetail,
   NoteFilters,
   NoteInput,
+  NoteLiker,
   NoteSearchParams,
   Paginated,
   TrendingCourse,
@@ -75,6 +76,11 @@ export const notesApi = baseApi.injectEndpoints({
       },
       invalidatesTags: ['NoteList', 'User'],
     }),
+    getNoteLikes: builder.query<ApiResponse<Paginated<NoteLiker>>, { id: string; page?: number }>({
+      query: ({ id, page = 1 }) => ({ url: `/notes/${id}/likes`, params: { page, limit: 20 } }),
+      // Beğeni ve takip değişince liste (ve "Following" durumu) tazelenir.
+      providesTags: (_result, _error, { id }) => [{ type: 'Note', id }, 'User'],
+    }),
     addComment: builder.mutation<ApiResponse<{ comment: Comment; commentsCount: number }>, { id: string; text: string }>({
       query: ({ id, text }) => ({ url: `/notes/${id}/comments`, method: 'POST', body: { text } }),
       invalidatesTags: (_result, _error, { id }) => [{ type: 'Note', id }, 'NoteList'],
@@ -103,6 +109,7 @@ export const {
   useUpdateNoteMutation,
   useDeleteNoteMutation,
   useToggleLikeMutation,
+  useGetNoteLikesQuery,
   useAddCommentMutation,
   useDeleteCommentMutation,
   useRegisterDownloadMutation,

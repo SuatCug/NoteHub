@@ -40,7 +40,7 @@ export default function CommentSection({ note }: { note: NoteDetail }) {
   const canDelete = (comment: Comment) => Boolean(user && (comment.user?._id === user.id || note.isOwner));
 
   return (
-    <section id="comments" className="card p-5 scroll-mt-24" aria-labelledby="comments-title">
+    <section id="comments" className="card p-5 scroll-mt-36 md:scroll-mt-24" aria-labelledby="comments-title">
       <h2 id="comments-title" className="text-lg font-semibold text-gray-900">
         Comments <span className="text-gray-400 font-normal text-base">({note.comments.length})</span>
       </h2>

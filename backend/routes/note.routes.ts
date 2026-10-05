@@ -39,6 +39,7 @@ router.get('/:id/download', idParamRules, validate, verifiedOnly, noteController
 // Beğeni
 router.post('/:id/like', idParamRules, validate, verifiedOnly, noteController.likeNote);
 router.delete('/:id/like', idParamRules, validate, verifiedOnly, noteController.unlikeNote);
+router.get('/:id/likes', idParamRules, validate, authenticate, noteController.getNoteLikes);
 
 // Yer imi (kaydet)
 router.post('/:id/save', idParamRules, validate, authenticate, noteController.saveNote);

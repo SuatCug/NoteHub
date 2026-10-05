@@ -33,7 +33,7 @@ export default function UserAvatar({ user, size = 'md', square = false, classNam
       <img
         src={assetUrl(user.avatarUrl)}
         alt={user.fullName}
-        className={`${SIZES[size]} ${shape} object-cover shrink-0 bg-gray-100 ${className}`}
+        className={`${SIZES[size]} ${shape} max-w-none object-cover shrink-0 bg-gray-100 ${className}`}
       />
     );
   }

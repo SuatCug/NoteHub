@@ -10,6 +10,7 @@ import FileTypeBadge from '@/components/notes/FileTypeBadge';
 import VisibilityBadge from '@/components/notes/VisibilityBadge';
 import NotePreview from '@/components/notes/NotePreview';
 import CommentSection from '@/components/notes/CommentSection';
+import LikesModal from '@/components/notes/LikesModal';
 import UserAvatar from '@/components/users/UserAvatar';
 import MessageButton from '@/components/messages/MessageButton';
 import {
@@ -48,6 +49,7 @@ export default function NoteDetailPage() {
   const [registerDownload] = useRegisterDownloadMutation();
   const [downloading, setDownloading] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [showLikes, setShowLikes] = useState(false);
 
   if (isLoading) return <PageLayout><Spinner /></PageLayout>;
   if (error || !data) {
@@ -90,6 +92,12 @@ export default function NoteDetailPage() {
     } finally {
       setDownloading(false);
     }
+  };
+
+  // Beğenenler listesi giriş gerektirir; ziyaretçi giriş sayfasına yönlenir, sonra bu nota döner.
+  const openLikes = () => {
+    if (!token) return navigate('/login', { state: { from: `/notes/${note._id}` } });
+    setShowLikes(true);
   };
 
   const handleLike = async () => {
@@ -166,6 +174,7 @@ export default function NoteDetailPage() {
               <span className="flex items-center gap-1.5">
                 <MessageCircle size={15} /> {pluralize(note.commentsCount, 'comment')}
               </span>
+              <LikesLink count={note.likesCount} onOpen={openLikes} />
             </div>
             <div className="flex items-center gap-2">
               <button type="button" onClick={handleDownload} disabled={downloading} className="btn-primary bg-navy-800 hover:bg-navy-900">
@@ -221,9 +230,7 @@ export default function NoteDetailPage() {
               <span className="text-gray-300">|</span>
               <span>{pluralize(note.downloadsCount, 'download')}</span>
               <span className="text-gray-300">|</span>
-              <span className="flex items-center gap-1">
-                <Heart size={14} className="fill-rose-500 text-rose-500" /> {pluralize(note.likesCount, 'like')}
-              </span>
+              <LikesLink count={note.likesCount} onOpen={openLikes} />
             </p>
 
             {note.isOwner ? (
@@ -292,6 +299,27 @@ export default function NoteDetailPage() {
           <CommentSection note={note} />
         </div>
       </div>
+      {showLikes && <LikesModal noteId={note._id} onClose={() => setShowLikes(false)} />}
     </PageLayout>
+  );
+}
+
+// "12 likes": tıklanınca beğenenler açılır (beğeni yoksa düz metin).
+function LikesLink({ count, onOpen }: { count: number; onOpen: () => void }) {
+  const content = (
+    <>
+      <Heart size={14} className="fill-rose-500 text-rose-500" /> {pluralize(count, 'like')}
+    </>
+  );
+  if (!count) return <span className="flex items-center gap-1.5">{content}</span>;
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      title="See who liked this"
+      className="flex items-center gap-1.5 rounded hover:text-gray-900 hover:underline underline-offset-2"
+    >
+      {content}
+    </button>
   );
 }

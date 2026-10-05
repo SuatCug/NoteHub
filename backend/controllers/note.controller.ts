@@ -6,7 +6,7 @@ import { listNotes, assertNoteVisible, PUBLIC_NOTES_MATCH } from '../services/no
 import { assertMember } from '../services/group.service.ts';
 import { notify, removeNotification } from '../services/notification.service.ts';
 import { saveNoteFile, readNoteFile, removeFile } from '../services/storage.service.ts';
-import { parsePagination } from '../utils/pagination.util.ts';
+import { parsePagination, buildPagination } from '../utils/pagination.util.ts';
 import { containsRegex, exactRegex, splitSearchWords, wordSearchMatch } from '../utils/regex.util.ts';
 import { NOTE_FILE_TYPES, getExtension, matchesSignature } from '../utils/fileTypes.util.ts';
 import type { NoteDocument } from '../models/note.model.ts';
@@ -307,6 +307,32 @@ const unlikeNote = asyncHandler<AuthedRequest>(async (req, res) => {
   res.json({ success: true, data: { isLiked: false, likesCount: note.likes.length } });
 });
 
+// Notu beğenenler (en yeni beğeni önce). Notu görebilen herkes listeyi görebilir;
+// izleyiciyle arasında engelleme olan kullanıcılar listede çıkmaz.
+const getNoteLikes = asyncHandler<AuthedRequest>(async (req, res) => {
+  const note = await findNoteOrFail(req.params.id, 'group author visibility likes');
+  await assertNoteVisible(note, req.user.id);
+  const { page, limit, skip } = parsePagination(req.query);
+
+  const [me, blockedMe] = await Promise.all([
+    User.findById(req.user.id).select('blockedUsers following').lean(),
+    User.find({ _id: { $in: note.likes }, blockedUsers: req.user.id }).select('_id').lean(),
+  ]);
+  const hidden = new Set([...(me?.blockedUsers ?? []), ...blockedMe.map((u) => u._id)].map(String));
+  const likerIds = [...note.likes].reverse().filter((id) => !hidden.has(String(id)));
+  const pageIds = likerIds.slice(skip, skip + limit);
+
+  const users = await User.find({ _id: { $in: pageIds } }).select(USER_CARD_FIELDS).lean();
+  const byId = new Map(users.map((u) => [String(u._id), u]));
+  const following = new Set((me?.following ?? []).map(String));
+  const items = pageIds
+    .map((id) => byId.get(String(id)))
+    .filter((u) => u !== undefined)
+    .map((u) => ({ ...u, isFollowing: following.has(String(u._id)), isMe: String(u._id) === req.user.id }));
+
+  res.json({ success: true, data: { items, pagination: buildPagination(page, limit, likerIds.length) } });
+});
+
 // Yer imi: kaydedilen notlar sadece kullanıcının kendisine görünür.
 const saveNote = asyncHandler<AuthedRequest>(async (req, res) => {
   await assertNoteVisible(await findNoteOrFail(req.params.id, 'group author visibility'), req.user.id);
@@ -371,4 +397,5 @@ export {
   downloadNote,
   likeNote,
   unlikeNote,
+  getNoteLikes,
 };

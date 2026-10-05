@@ -41,7 +41,8 @@ export default function PeopleResults({ query }: { query: string }) {
         )}
       </div>
 
-      <ul className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+      {/* Sütun sayısı ekran değil kapsayıcı genişliğine göre: akıştaki dar orta sütunda kartlar (ve avatar) ezilmez. */}
+      <ul className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(140px,1fr))]">
         {visible.map((u) => (
           <li key={u._id}>
             <UserCard user={u} />

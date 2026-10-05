@@ -5,6 +5,7 @@ import { Bookmark, Check, Download, Heart, Loader2, MessageCircle, Share2 } from
 import FileTypeBadge from '@/components/notes/FileTypeBadge';
 import VisibilityBadge from '@/components/notes/VisibilityBadge';
 import UserAvatar from '@/components/users/UserAvatar';
+import LikesModal from '@/components/notes/LikesModal';
 import { useRegisterDownloadMutation, useToggleLikeMutation, useToggleSaveMutation } from '@/services/notesApi';
 import { downloadNote } from '@/lib/downloadNote';
 import { getErrorMessage } from '@/lib/getErrorMessage';
@@ -39,6 +40,7 @@ export default function NotePostCard({ note, index = 0 }: { note: NoteCard; inde
 
   const [downloading, setDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showLikes, setShowLikes] = useState(false);
 
   const noteUrl = `/notes/${note._id}`;
   const FileIcon = (FILE_TYPES[note.fileType] ?? FILE_TYPES.pdf).icon;
@@ -173,18 +175,30 @@ export default function NotePostCard({ note, index = 0 }: { note: NoteCard; inde
       )}
 
       <footer className="mt-3 -mx-1.5 flex items-center gap-0.5 border-t border-gray-100 pt-2">
-        <button
-          type="button"
-          onClick={handleLike}
-          disabled={!isVerified}
-          title={verifyHint}
-          aria-pressed={isLiked}
-          className={`${actionClass} ${isLiked ? 'text-rose-500 hover:text-rose-600' : ''}`}
-        >
-          <Heart size={17} className={isLiked ? 'fill-rose-500' : ''} />
-          {formatCount(likesCount)}
-          <span className="sr-only">likes</span>
-        </button>
+        {/* Kalp beğenir; yanındaki sayı beğenenleri açar (Instagram gibi). */}
+        <span className="inline-flex items-center">
+          <button
+            type="button"
+            onClick={handleLike}
+            disabled={!isVerified}
+            title={verifyHint}
+            aria-pressed={isLiked}
+            aria-label={isLiked ? 'Unlike' : 'Like'}
+            className={`${actionClass} pr-1 ${isLiked ? 'text-rose-500 hover:text-rose-600' : ''}`}
+          >
+            <Heart size={17} className={isLiked ? 'fill-rose-500' : ''} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowLikes(true)}
+            disabled={likesCount === 0}
+            title="See who liked this"
+            className={`${actionClass} -ml-0.5 pl-1 ${isLiked ? 'text-rose-500 hover:text-rose-600' : ''}`}
+          >
+            {formatCount(likesCount)}
+            <span className="sr-only">likes — see who liked this</span>
+          </button>
+        </span>
         <Link to={`${noteUrl}#comments`} className={actionClass}>
           <MessageCircle size={17} />
           {formatCount(note.commentsCount)}
@@ -218,6 +232,7 @@ export default function NotePostCard({ note, index = 0 }: { note: NoteCard; inde
           <Bookmark size={17} className={isSaved ? 'fill-navy-600' : ''} />
         </button>
       </footer>
+      {showLikes && <LikesModal noteId={note._id} onClose={() => setShowLikes(false)} />}
     </article>
   );
 }

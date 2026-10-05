@@ -42,6 +42,12 @@ export interface UserCard {
   isOwner?: boolean; // grup üye listesinde
 }
 
+// Notu beğenenler listesindeki kişi: izleyicinin onu takip edip etmediği ve kendisi olup olmadığı ile.
+export interface NoteLiker extends UserCard {
+  isFollowing: boolean;
+  isMe: boolean;
+}
+
 // Başka kullanıcıların görebileceği profil (User.toPublicJSON).
 export interface PublicUser {
   id: ID;
