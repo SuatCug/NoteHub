@@ -1,5 +1,5 @@
-const asyncHandler = require('../utils/asyncHandler');
-const { ContactMessage } = require('../models');
+import asyncHandler from '../utils/asyncHandler.ts';
+import { ContactMessage } from '../models/index.ts';
 
 const sendContactMessage = asyncHandler(async (req, res) => {
   const { name, email, topic, message } = req.body;
@@ -8,4 +8,4 @@ const sendContactMessage = asyncHandler(async (req, res) => {
   res.status(201).json({ success: true, message: 'Thanks! Your message has been received.' });
 });
 
-module.exports = { sendContactMessage };
+export { sendContactMessage };

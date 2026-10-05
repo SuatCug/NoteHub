@@ -1,7 +1,7 @@
 import { Fragment, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { Bookmark, Compass, FileUp, Flame, Loader2, UserPlus } from 'lucide-react';
+import { useAppSelector } from '@/app/hooks';
+import { Bookmark, Compass, FileUp, Flame, Loader2, UserPlus, type LucideIcon } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import BrowseNotes from '@/components/notes/BrowseNotes';
 import Alert from '@/components/common/Alert';
@@ -16,14 +16,18 @@ import { getErrorMessage } from '@/lib/getErrorMessage';
 
 const FEED_PAGE_SIZE = 10;
 
-const TABS = [
+type FeedTab = 'all' | 'popular' | 'following' | 'saved';
+
+const TABS: { id: FeedTab; label: string; icon: LucideIcon }[] = [
   { id: 'all', label: 'All', icon: Compass },
   { id: 'popular', label: 'Popular', icon: Flame },
   { id: 'following', label: 'Following', icon: UserPlus },
   { id: 'saved', label: 'Saved', icon: Bookmark },
 ];
 
-const EMPTY = {
+const isFeedTab = (value: string | null): value is FeedTab => TABS.some((t) => t.id === value);
+
+const EMPTY: Record<FeedTab, { title: string; text: string }> = {
   all: { title: 'No notes shared yet', text: 'Be the first to share a note with the community!' },
   popular: { title: 'No popular notes yet', text: 'Notes with the most likes will show up here.' },
   following: {
@@ -38,7 +42,8 @@ const EMPTY = {
 export default function SocialHome() {
   const [searchParams] = useSearchParams();
   const exploring = [...searchParams.keys()].some((k) => k !== 'tab');
-  const tab = TABS.some((t) => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'all';
+  const tabParam = searchParams.get('tab');
+  const tab = isFeedTab(tabParam) ? tabParam : 'all';
 
   return (
     <PageLayout>
@@ -61,7 +66,7 @@ export default function SocialHome() {
   );
 }
 
-function Feed({ tab }) {
+function Feed({ tab }: { tab: FeedTab }) {
   const [, setSearchParams] = useSearchParams();
 
   return (
@@ -97,7 +102,7 @@ function Feed({ tab }) {
 
 // Sosyal medyadaki "ne düşünüyorsun?" kutusu: not yükleme sayfasına götürür.
 function Composer() {
-  const user = useSelector((state) => state.auth.user);
+  const user = useAppSelector((state) => state.auth.user);
   const firstName = user?.fullName?.split(' ')[0];
 
   return (
@@ -114,7 +119,7 @@ function Composer() {
 }
 
 // Sekmeye göre doğru listeyi çeker; kullanılmayan sorgular atlanır (skip).
-function useFeedPage(tab, page) {
+function useFeedPage(tab: FeedTab, page: number) {
   const args = { page, limit: FEED_PAGE_SIZE };
   const notes = useGetNotesQuery(
     { ...args, sort: tab === 'popular' ? 'popular' : 'newest' },
@@ -126,7 +131,7 @@ function useFeedPage(tab, page) {
 }
 
 // "Load more" ile sayfalar alt alta eklenir; her sayfa kendi sorgusunu yapar (RTK Query önbelleği paylaşılır).
-function FeedList({ tab }) {
+function FeedList({ tab }: { tab: FeedTab }) {
   const [pageCount, setPageCount] = useState(1);
   const last = useFeedPage(tab, pageCount);
   const totalPages = last.data?.data?.pagination?.totalPages ?? 0;
@@ -157,7 +162,7 @@ function FeedList({ tab }) {
   );
 }
 
-function FeedPage({ tab, page }) {
+function FeedPage({ tab, page }: { tab: FeedTab; page: number }) {
   const { data, isLoading, error } = useFeedPage(tab, page);
 
   if (isLoading) {

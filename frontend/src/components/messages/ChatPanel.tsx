@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type SyntheticEvent } from 'react';
+import { skipToken } from '@reduxjs/toolkit/query/react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { ArrowLeft, FileText, MessagesSquare, MoreVertical, Paperclip, SendHorizontal, Trash2, X } from 'lucide-react';
 import UserAvatar from '@/components/users/UserAvatar';
 import BlockButton from '@/components/users/BlockButton';
@@ -16,13 +17,14 @@ import { useGetNoteQuery } from '@/services/notesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 import { timeAgo } from '@/lib/format';
 import { useFallbackPolling } from '@/lib/socket';
+import type { MessageNote } from '@/types/api';
 
 // Yeni mesajlar Socket.io ile anında gelir; bağlantı yoksa açık konuşma bu aralıkla yoklanır.
 const POLL_INTERVAL_MS = 5000;
 
 // Birebir sohbet paneli. ?note=<id> ile açıldıysa ("Ask the author") not, gönderilecek mesaja iliştirilir.
-export default function ChatPanel({ conversationId }) {
-  const me = useSelector((state) => state.auth.user);
+export default function ChatPanel({ conversationId }: { conversationId: string }) {
+  const me = useAppSelector((state) => state.auth.user);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const attachedNoteId = searchParams.get('note');
@@ -31,7 +33,7 @@ export default function ChatPanel({ conversationId }) {
     pollingInterval: useFallbackPolling(POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
   });
-  const attachedNote = useGetNoteQuery(attachedNoteId, { skip: !attachedNoteId });
+  const attachedNote = useGetNoteQuery(attachedNoteId || skipToken);
   const [sendMessage, { isLoading: sending }] = useSendDirectMessageMutation();
   const [deleteMessage] = useDeleteDirectMessageMutation();
   const [deleteConversation] = useDeleteConversationMutation();
@@ -39,8 +41,8 @@ export default function ChatPanel({ conversationId }) {
   const [text, setText] = useState('');
   const [sendError, setSendError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
-  const listRef = useRef(null);
-  const inputRef = useRef(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   const conversation = data?.data?.conversation;
   const messages = data?.data?.messages;
@@ -64,7 +66,7 @@ export default function ChatPanel({ conversationId }) {
     setSearchParams(next, { replace: true });
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
     const trimmed = text.trim();
     if (!trimmed || sending) return;
@@ -79,11 +81,11 @@ export default function ChatPanel({ conversationId }) {
   };
 
   // Enter gönderir, Shift+Enter yeni satır ekler.
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e);
   };
 
-  const handleDeleteMessage = async (messageId) => {
+  const handleDeleteMessage = async (messageId: string) => {
     if (!window.confirm('Unsend this message? It will be removed for both of you.')) return;
     try {
       await deleteMessage({ id: conversationId, messageId }).unwrap();
@@ -226,7 +228,7 @@ export default function ChatPanel({ conversationId }) {
       {blockedNotice ? (
         <div className="border-t border-gray-100 px-4 py-4 text-center text-sm text-gray-500">
           {blockedNotice}
-          {conversation.blockedByMe && other && (
+          {conversation?.blockedByMe && other && (
             <div className="mt-2">
               <BlockButton userId={other._id} isBlocked name={other.fullName} />
             </div>
@@ -277,7 +279,7 @@ export default function ChatPanel({ conversationId }) {
 }
 
 // Mesaja eklenmiş not kartı (tıklayınca not sayfası açılır).
-function NoteAttachment({ note, mine }) {
+function NoteAttachment({ note, mine }: { note: MessageNote; mine: boolean }) {
   return (
     <Link
       to={`/notes/${note._id}`}

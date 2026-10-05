@@ -1,5 +1,5 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { ArrowRight, Pencil, Upload } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Spinner from '@/components/common/Spinner';
@@ -24,8 +24,8 @@ const NOTES_PREVIEW = 3;
 const USERS_PREVIEW = 5;
 
 export default function ProfilePage() {
-  const { id } = useParams();
-  const token = useSelector((state) => state.auth.token);
+  const { id = '' } = useParams();
+  const token = useAppSelector((state) => state.auth.token);
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') || 'notes';
 
@@ -36,7 +36,7 @@ export default function ProfilePage() {
   const following = useGetFollowingQuery(id, { skip: tab !== 'following' });
 
   if (isLoading) return <PageLayout><Spinner /></PageLayout>;
-  if (error) {
+  if (error || !data) {
     return (
       <PageLayout narrow>
         <EmptyState title="User not found" action={<Link to="/" className="btn-primary">Back to home</Link>} />
@@ -157,7 +157,14 @@ export default function ProfilePage() {
 
 // to verilirse kutu ilgili listeye (takipçiler / takip edilenler) bağlantı olur.
 // wideOnMobile: 2 sütunlu mobil ızgarada tam satır kaplar (5 kutu tek kalan olmadan dizilsin diye).
-function ProfileStat({ label, value, to, wideOnMobile = false }) {
+interface ProfileStatProps {
+  label: string;
+  value: number;
+  to?: string;
+  wideOnMobile?: boolean;
+}
+
+function ProfileStat({ label, value, to, wideOnMobile = false }: ProfileStatProps) {
   const className = `rounded-xl bg-gray-50 px-4 py-3 flex flex-col-reverse ${wideOnMobile ? 'col-span-2 sm:col-span-1' : ''}`;
   const content = (
     <>

@@ -1,9 +1,10 @@
-const mongoose = require('mongoose');
-const { Note, Group, User } = require('../models');
-const ApiError = require('../utils/apiError');
-const { buildPagination } = require('../utils/pagination.util');
+import mongoose from 'mongoose';
+import { Note, Group, User } from '../models/index.ts';
+import ApiError from '../utils/apiError.ts';
+import { buildPagination, type PaginationParams } from '../utils/pagination.util.ts';
+import type { MatchFilter, SortSpec } from '../types/common.ts';
 
-const SORT_OPTIONS = {
+const SORT_OPTIONS: Record<string, SortSpec> = {
   newest: { createdAt: -1 },
   oldest: { createdAt: 1 },
   popular: { likesCount: -1, createdAt: -1 },
@@ -12,7 +13,7 @@ const SORT_OPTIONS = {
 
 // Not listelerinde (arama, akış, profil) ortak kullanılan kart görünümü.
 // Beğeni/yorum dizilerinin tamamı yerine sadece sayıları döndürülür.
-const cardProjection = (viewerId, savedIds = []) => ({
+const cardProjection = (viewerId: string | undefined, savedIds: mongoose.Types.ObjectId[] = []) => ({
   title: 1,
   description: 1,
   university: 1,
@@ -45,11 +46,11 @@ const cardProjection = (viewerId, savedIds = []) => ({
 // (Grup silinince notun group alanı kaldırılır ve not genel paylaşıma döner.)
 // Herkese açık notlar: grupsuz ve "sadece takipçiler" olmayanlar (eski kayıtlarda visibility alanı yok = public).
 // Filtre seçenekleri, popüler dersler ve genel sayaçlar sadece bunlardan üretilir.
-const PUBLIC_NOTES_MATCH = { group: null, visibility: { $ne: 'followers' } };
+const PUBLIC_NOTES_MATCH = { group: null, visibility: { $ne: 'followers' as const } };
 
 // İzleyicinin görebileceği grupsuz notlar: herkese açık olanlar + kendi notları + takip ettiklerinin
 // "sadece takipçiler" notları.
-const visibleNotesMatch = (viewerId, following = []) => ({
+const visibleNotesMatch = (viewerId: string | undefined, following: mongoose.Types.ObjectId[] = []) => ({
   group: null,
   $or: [
     { visibility: { $ne: 'followers' } },
@@ -61,12 +62,18 @@ const visibleNotesMatch = (viewerId, following = []) => ({
 // Grup notlarını sadece grup üyeleri, "sadece takipçiler" notlarını sadece yazarı takip edenler görebilir;
 // notun yazarı her zaman görür.
 // note: group, author ve visibility alanları seçilmiş not dokümanı (group/author populate edilmiş olabilir).
-const assertNoteVisible = async (note, viewerId) => {
-  const groupId = note.group?._id ?? note.group;
+// group / author: ObjectId ya da populate edilmiş doküman; ikisinde de _id vardır (ObjectId'nin _id'si kendisidir).
+type RefField = { _id: mongoose.Types.ObjectId } | null | undefined;
+
+const assertNoteVisible = async (
+  note: { group?: RefField; author?: RefField; visibility?: string | null },
+  viewerId: string | undefined
+) => {
+  const groupId = note.group?._id;
   const followersOnly = !groupId && note.visibility === 'followers';
   if (!groupId && !followersOnly) return;
 
-  const authorId = note.author?._id ?? note.author;
+  const authorId = note.author?._id;
   if (viewerId && authorId?.equals(viewerId)) return;
 
   const allowed = groupId
@@ -78,7 +85,14 @@ const assertNoteVisible = async (note, viewerId) => {
 // Filtre + sıralama + sayfalama ile not kartlarını ve toplam sayıyı döndürür.
 // includeGroupNotes: grup sayfası için (üyelik kontrolü önceden yapılır); aksi halde izleyicinin görebileceği
 // grupsuz notlar listelenir (herkese açık + takip ettiklerinin "sadece takipçiler" notları + kendi notları).
-const listNotes = async ({ match = {}, sort = 'newest', page, limit, skip, viewerId, includeGroupNotes = false }) => {
+interface ListNotesOptions extends PaginationParams {
+  match?: MatchFilter;
+  sort?: unknown;
+  viewerId?: string;
+  includeGroupNotes?: boolean;
+}
+
+const listNotes = async ({ match = {}, sort = 'newest', page, limit, skip, viewerId, includeGroupNotes = false }: ListNotesOptions) => {
   // Kartlardaki yer imi durumu ve takipçi görünürlüğü için izleyicinin kaydettikleri ve takip ettikleri.
   const viewer = viewerId ? await User.findById(viewerId).select('savedNotes following').lean() : null;
   const savedIds = viewer?.savedNotes ?? [];
@@ -86,7 +100,7 @@ const listNotes = async ({ match = {}, sort = 'newest', page, limit, skip, viewe
   const [result] = await Note.aggregate([
     { $match: fullMatch },
     { $addFields: { likesCount: { $size: '$likes' } } },
-    { $sort: SORT_OPTIONS[sort] || SORT_OPTIONS.newest },
+    { $sort: SORT_OPTIONS[String(sort)] || SORT_OPTIONS.newest },
     {
       $facet: {
         items: [
@@ -105,4 +119,4 @@ const listNotes = async ({ match = {}, sort = 'newest', page, limit, skip, viewe
   return { items: result.items, pagination: buildPagination(page, limit, total) };
 };
 
-module.exports = { listNotes, assertNoteVisible, PUBLIC_NOTES_MATCH, SORT_OPTIONS };
+export { listNotes, assertNoteVisible, PUBLIC_NOTES_MATCH, SORT_OPTIONS };

@@ -1,12 +1,13 @@
-const router = require('express').Router();
-const userController = require('../controllers/user.controller');
-const authenticate = require('../middlewares/auth.middleware');
-const { optionalAuth } = require('../middlewares/auth.middleware');
-const requireVerified = require('../middlewares/verified.middleware');
-const validate = require('../middlewares/validate.middleware');
-const { uploadAvatar } = require('../middlewares/upload.middleware');
-const { idParamRules } = require('../validations/common.validation');
-const { updateProfileRules, changePasswordRules } = require('../validations/user.validation');
+import { Router } from 'express';
+import * as userController from '../controllers/user.controller.ts';
+import authenticate, { optionalAuth } from '../middlewares/auth.middleware.ts';
+import requireVerified from '../middlewares/verified.middleware.ts';
+import validate from '../middlewares/validate.middleware.ts';
+import { uploadAvatar } from '../middlewares/upload.middleware.ts';
+import { idParamRules } from '../validations/common.validation.ts';
+import { updateProfileRules, changePasswordRules } from '../validations/user.validation.ts';
+
+const router = Router();
 
 // Kendi hesabı
 router.patch('/me', authenticate, updateProfileRules, validate, userController.updateProfile);
@@ -30,4 +31,4 @@ router.delete('/:id/follow', idParamRules, validate, authenticate, requireVerifi
 router.post('/:id/block', idParamRules, validate, authenticate, userController.block);
 router.delete('/:id/block', idParamRules, validate, authenticate, userController.unblock);
 
-module.exports = router;
+export default router;

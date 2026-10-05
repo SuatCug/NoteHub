@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck, Heart, MessageCircle, UserPlus, Users } from 'lucide-react';
+import { Bell, CheckCheck, Heart, MessageCircle, UserPlus, Users, type LucideIcon } from 'lucide-react';
 import UserAvatar from '@/components/users/UserAvatar';
 import {
   useGetNotificationCountQuery,
@@ -11,11 +11,19 @@ import {
 import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
 import { timeAgo } from '@/lib/format';
 import { useFallbackPolling } from '@/lib/socket';
+import type { AppNotification, NotificationType } from '@/types/api';
 
 const LIST_LIMIT = 20;
 
 // Bildirim türüne göre ikon, metin ve tıklanınca gidilecek adres.
-const NOTIFICATION_VIEW = {
+type NotificationView = {
+  icon: LucideIcon;
+  color: string;
+  text: (n: AppNotification) => ReactNode;
+  to: (n: AppNotification) => string;
+};
+
+const NOTIFICATION_VIEW: Record<NotificationType, NotificationView> = {
   like: { icon: Heart, color: 'bg-rose-500', text: (n) => <>liked your note <b>{n.note?.title}</b></>, to: (n) => `/notes/${n.note?._id}` },
   comment: {
     icon: MessageCircle,
@@ -50,7 +58,7 @@ export default function NotificationBell() {
   const unread = countData?.data?.count ?? 0;
   const items = data?.data?.items ?? [];
 
-  const handleItemClick = (n) => {
+  const handleItemClick = (n: AppNotification) => {
     setOpen(false);
     if (!n.read) markRead(n._id);
     navigate(NOTIFICATION_VIEW[n.type].to(n));

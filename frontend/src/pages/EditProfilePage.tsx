@@ -1,16 +1,20 @@
-import { useRef, useState } from 'react';
+import { useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { Camera } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PasswordField from '@/components/auth/PasswordField';
-import Alert from '@/components/common/Alert';
+import Alert, { type AlertVariant } from '@/components/common/Alert';
 import UserAvatar from '@/components/users/UserAvatar';
 import { useChangePasswordMutation, useUpdateAvatarMutation, useUpdateProfileMutation } from '@/services/usersApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import type { AuthUser } from '@/types/api';
+
+type Feedback = { type: AlertVariant | ''; text: string };
 
 export default function EditProfilePage() {
-  const user = useSelector((state) => state.auth.user);
+  const user = useAppSelector((state) => state.auth.user);
+  if (!user) return null;
 
   return (
     <PageLayout narrow>
@@ -30,7 +34,7 @@ export default function EditProfilePage() {
   );
 }
 
-function Section({ title, description, children }) {
+function Section({ title, description, children }: { title: string; description?: string; children: ReactNode }) {
   return (
     <section className="card p-5 sm:p-7">
       <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
@@ -40,12 +44,12 @@ function Section({ title, description, children }) {
   );
 }
 
-function AvatarSection({ user }) {
+function AvatarSection({ user }: { user: AuthUser }) {
   const [updateAvatar, { isLoading }] = useUpdateAvatarMutation();
-  const [feedback, setFeedback] = useState({ type: '', text: '' });
-  const inputRef = useRef(null);
+  const [feedback, setFeedback] = useState<Feedback>({ type: '', text: '' });
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFile = async (file) => {
+  const handleFile = async (file: File | undefined) => {
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
       setFeedback({ type: 'error', text: 'Profile photo can be at most 2 MB.' });
@@ -89,7 +93,7 @@ function AvatarSection({ user }) {
   );
 }
 
-function ProfileSection({ user }) {
+function ProfileSection({ user }: { user: AuthUser }) {
   const [updateProfile, { isLoading }] = useUpdateProfileMutation();
   const [form, setForm] = useState({
     fullName: user.fullName,
@@ -97,11 +101,11 @@ function ProfileSection({ user }) {
     department: user.department,
     bio: user.bio ?? '',
   });
-  const [feedback, setFeedback] = useState({ type: '', text: '' });
+  const [feedback, setFeedback] = useState<Feedback>({ type: '', text: '' });
 
-  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       await updateProfile(form).unwrap();
@@ -155,9 +159,9 @@ function PasswordSection() {
   const [changePassword, { isLoading }] = useChangePasswordMutation();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
-  const [feedback, setFeedback] = useState({ type: '', text: '' });
+  const [feedback, setFeedback] = useState<Feedback>({ type: '', text: '' });
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       await changePassword({ currentPassword, newPassword }).unwrap();

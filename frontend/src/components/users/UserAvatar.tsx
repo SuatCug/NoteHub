@@ -9,8 +9,16 @@ const SIZES = {
   card: 'w-[88px] h-[88px] text-2xl',
 };
 
+interface UserAvatarProps {
+  // Oturum kullanıcısı, profil ya da liste kartı olabilir: sadece ad ve avatar okunur.
+  user?: { fullName?: string; avatarUrl?: string } | null;
+  size?: keyof typeof SIZES;
+  square?: boolean;
+  className?: string;
+}
+
 // Avatar yüklenmemişse ad soyadın baş harflerini gösterir. square: yuvarlak yerine köşeleri yumuşatılmış kare.
-export default function UserAvatar({ user, size = 'md', square = false, className = '' }) {
+export default function UserAvatar({ user, size = 'md', square = false, className = '' }: UserAvatarProps) {
   const shape = square ? 'rounded-xl' : 'rounded-full';
   const initials =
     user?.fullName

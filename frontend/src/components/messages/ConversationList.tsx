@@ -6,9 +6,16 @@ import Spinner from '@/components/common/Spinner';
 import Alert from '@/components/common/Alert';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 import { timeAgo } from '@/lib/format';
+import type { ConversationSummary } from '@/types/api';
+
+interface ConversationListProps {
+  conversations?: ConversationSummary[];
+  isLoading: boolean;
+  error?: unknown;
+}
 
 // Mesajlar sayfasının sol paneli: konuşmalar (son mesaj önizlemesi + okunmamış sayısı) ve isimde arama.
-export default function ConversationList({ conversations, isLoading, error }) {
+export default function ConversationList({ conversations, isLoading, error }: ConversationListProps) {
   const [search, setSearch] = useState('');
   const term = search.trim().toLocaleLowerCase('tr');
   const filtered = term
@@ -57,7 +64,7 @@ export default function ConversationList({ conversations, isLoading, error }) {
   );
 }
 
-function ConversationItem({ conversation: c }) {
+function ConversationItem({ conversation: c }: { conversation: ConversationSummary }) {
   const unread = c.unreadCount > 0;
   const preview = c.lastMessage.hasNote && !c.lastMessage.text ? 'Shared a note' : c.lastMessage.text;
 

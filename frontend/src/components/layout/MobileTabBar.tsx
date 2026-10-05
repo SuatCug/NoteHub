@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { Home, MessageCircle, Plus, UserRound, Users } from 'lucide-react';
 import { useGetUnreadCountQuery } from '@/services/messagesApi';
 import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
 import { useFallbackPolling } from '@/lib/socket';
 
-const itemClass = ({ isActive }) =>
+const itemClass = ({ isActive }: { isActive: boolean }) =>
   `relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[11px] font-semibold transition-colors ${
     isActive ? 'text-navy-700' : 'text-gray-500 active:text-navy-700'
   }`;
@@ -13,7 +13,7 @@ const itemClass = ({ isActive }) =>
 // Telefonda (md altı) giriş yapmış kullanıcıya gösterilen alt sekme çubuğu.
 // Masaüstünde bu bağlantılar üst bardadır.
 export default function MobileTabBar() {
-  const user = useSelector((state) => state.auth.user);
+  const user = useAppSelector((state) => state.auth.user);
   const { data } = useGetUnreadCountQuery(undefined, {
     pollingInterval: useFallbackPolling(UNREAD_POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,

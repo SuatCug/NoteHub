@@ -11,11 +11,14 @@ import GroupMemberList from '@/components/groups/GroupMemberList';
 import GroupRequestList from '@/components/groups/GroupRequestList';
 import GroupChat from '@/components/groups/GroupChat';
 import { useGetGroupMembersQuery, useGetGroupNotesQuery, useGetGroupQuery } from '@/services/groupsApi';
-import { getErrorMessage } from '@/lib/getErrorMessage';
+import { getErrorMessage, isNotFound } from '@/lib/getErrorMessage';
+
+type GroupTab = { key: 'notes' | 'members' | 'chat' | 'requests'; label: string; count?: number };
 import { formatCount, formatDate } from '@/lib/format';
+import { compact } from '@/lib/compact';
 
 export default function GroupDetailPage() {
-  const { id } = useParams();
+  const { id = '' } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab') || 'notes';
   const page = Number(searchParams.get('page')) || 1;
@@ -26,16 +29,16 @@ export default function GroupDetailPage() {
   // Grup notları ve sohbet her grupta sadece üyelere açık; özel grubun üye listesi de öyle. İstekler sadece kurucuya.
   const canView = Boolean(group && (!group.isPrivate || group.isMember));
   const tabs = group
-    ? [
+    ? compact<GroupTab>([
         { key: 'notes', label: 'Notes', count: group.notesCount },
         { key: 'members', label: 'Members', count: group.membersCount },
         group.isMember && { key: 'chat', label: 'Chat' },
-        group.isOwner && (group.isPrivate || group.pendingCount > 0) && {
+        group.isOwner && (group.isPrivate || (group.pendingCount ?? 0) > 0) && {
           key: 'requests',
           label: 'Requests',
           count: group.pendingCount,
         },
-      ].filter(Boolean)
+      ])
     : [];
   const tab = tabs.some((t) => t.key === requestedTab) ? requestedTab : 'notes';
 
@@ -43,13 +46,13 @@ export default function GroupDetailPage() {
   const members = useGetGroupMembersQuery(id, { skip: !canView || tab !== 'members' });
 
   if (isLoading) return <PageLayout><Spinner /></PageLayout>;
-  if (error) {
+  if (error || !group) {
     return (
       <PageLayout narrow>
         <EmptyState
           icon={Users}
-          title={error.status === 404 ? 'Group not found' : 'Could not load group'}
-          text={error.status === 404 ? 'This group may have been deleted.' : getErrorMessage(error)}
+          title={isNotFound(error) ? 'Group not found' : 'Could not load group'}
+          text={isNotFound(error) ? 'This group may have been deleted.' : getErrorMessage(error)}
           action={<Link to="/groups" className="btn-primary">Back to groups</Link>}
         />
       </PageLayout>

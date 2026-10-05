@@ -1,4 +1,6 @@
 {
   "legacyWatch": true,
+  "ext": "ts,json",
+  "exec": "node index.ts",
   "ignore": ["uploads/*", "node_modules/*"]
 }

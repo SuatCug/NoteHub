@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { Bookmark, ChevronDown, FileText, LogOut, Settings, User, Users } from 'lucide-react';
 import { logout } from '@/app/authSlice';
 import { baseApi, SESSION_TAGS } from '@/services/baseApi';
 import UserAvatar from '@/components/users/UserAvatar';
 
 export default function AvatarMenu() {
-  const user = useSelector((state) => state.auth.user);
-  const dispatch = useDispatch();
+  const user = useAppSelector((state) => state.auth.user);
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 

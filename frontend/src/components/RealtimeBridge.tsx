@@ -1,21 +1,21 @@
 import { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { baseApi } from '@/services/baseApi';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
+import { baseApi, type TagType } from '@/services/baseApi';
 import { connectSocket, disconnectSocket } from '@/lib/socket';
 
 // Socket olayları sadece "bu veri değişti" sinyalidir; ilgili RTK Query önbelleği geçersiz kılınır ve
 // açık bileşenler veriyi REST API'den yeniden çeker (yetki kontrolü tek yerde kalır).
-const REALTIME_TAGS = ['Notifications', 'Conversations', 'Unread', 'ActiveUsers', 'GroupMessages'];
+const REALTIME_TAGS: TagType[] = ['Notifications', 'Conversations', 'Unread', 'ActiveUsers', 'GroupMessages'];
 
 export default function RealtimeBridge() {
-  const token = useSelector((state) => state.auth.token);
-  const dispatch = useDispatch();
+  const token = useAppSelector((state) => state.auth.token);
+  const dispatch = useAppDispatch();
 
   useEffect(() => {
     if (!token) return undefined;
 
     const socket = connectSocket(token);
-    const invalidate = (tags) => dispatch(baseApi.util.invalidateTags(tags));
+    const invalidate = (tags: (TagType | { type: TagType; id: string })[]) => dispatch(baseApi.util.invalidateTags(tags));
     let connectedBefore = false;
 
     // Bağlantı koptuktan sonra geri gelince arada kaçan olaylar için hepsi bir kez yenilenir.

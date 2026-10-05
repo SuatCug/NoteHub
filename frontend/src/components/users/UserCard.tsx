@@ -1,8 +1,9 @@
 import { Link } from 'react-router-dom';
 import UserAvatar from './UserAvatar';
+import type { UserCard as UserCardData } from '@/types/api';
 
 // Ortalanmış kullanıcı kartı: kare avatar, ad, üniversite, bölüm.
-export default function UserCard({ user }) {
+export default function UserCard({ user }: { user: UserCardData }) {
   return (
     <Link
       to={`/users/${user._id}`}

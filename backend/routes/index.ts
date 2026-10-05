@@ -1,17 +1,27 @@
-const router = require('express').Router();
-const { blockUnverified } = require('../middlewares/auth.middleware');
+import { Router } from 'express';
+import { blockUnverified } from '../middlewares/auth.middleware.ts';
+import authRoutes from './auth.routes.ts';
+import contactRoutes from './contact.routes.ts';
+import statsRoutes from './stats.routes.ts';
+import userRoutes from './user.routes.ts';
+import noteRoutes from './note.routes.ts';
+import groupRoutes from './group.routes.ts';
+import messageRoutes from './message.routes.ts';
+import notificationRoutes from './notification.routes.ts';
+
+const router = Router();
 
 // Herkese açık / doğrulama ekranının kullandığı endpoint'ler.
-router.use('/auth', require('./auth.routes'));
-router.use('/contact', require('./contact.routes'));
-router.use('/stats', require('./stats.routes'));
+router.use('/auth', authRoutes);
+router.use('/contact', contactRoutes);
+router.use('/stats', statsRoutes);
 
 // İçerik endpoint'leri: e-postasını doğrulamamış oturumlar erişemez (doğrulama şartı açıksa).
 router.use(blockUnverified);
-router.use('/users', require('./user.routes'));
-router.use('/notes', require('./note.routes'));
-router.use('/groups', require('./group.routes'));
-router.use('/messages', require('./message.routes'));
-router.use('/notifications', require('./notification.routes'));
+router.use('/users', userRoutes);
+router.use('/notes', noteRoutes);
+router.use('/groups', groupRoutes);
+router.use('/messages', messageRoutes);
+router.use('/notifications', notificationRoutes);
 
-module.exports = router;
+export default router;

@@ -8,17 +8,17 @@ import ProfileSidebar from '@/components/users/ProfileSidebar';
 import UserList from '@/components/users/UserList';
 import { useGetFollowersQuery, useGetFollowingQuery, useGetProfileQuery } from '@/services/usersApi';
 import { formatCount, pluralize } from '@/lib/format';
+import type { UserCard } from '@/types/api';
 
 // Arama: ad, üniversite ve bölümde büyük/küçük harf duyarsız (Türkçe) eşleşme.
-const matches = (user, term) =>
+const matches = (user: UserCard, term: string) =>
   [user.fullName, user.university, user.department].some((v) =>
     v?.toLocaleLowerCase('tr').includes(term.toLocaleLowerCase('tr'))
   );
 
 // Bir kullanıcının tüm takipçileri / takip ettikleri: solda kullanıcı paneli, sağda arama + kullanıcı kartları.
-// type: 'followers' | 'following'
-export default function UserConnectionsPage({ type }) {
-  const { id } = useParams();
+export default function UserConnectionsPage({ type }: { type: 'followers' | 'following' }) {
+  const { id = '' } = useParams();
   const [search, setSearch] = useState('');
 
   const profile = useGetProfileQuery(id);
@@ -27,7 +27,7 @@ export default function UserConnectionsPage({ type }) {
   const list = type === 'followers' ? followers : following;
 
   if (profile.isLoading) return <PageLayout><Spinner /></PageLayout>;
-  if (profile.error) {
+  if (profile.error || !profile.data) {
     return (
       <PageLayout narrow>
         <EmptyState title="User not found" action={<Link to="/" className="btn-primary">Back to home</Link>} />

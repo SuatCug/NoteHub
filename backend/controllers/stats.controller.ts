@@ -1,9 +1,9 @@
-const asyncHandler = require('../utils/asyncHandler');
-const { User, Note, Group } = require('../models');
-const { PUBLIC_NOTES_MATCH } = require('../services/note.service');
+import asyncHandler from '../utils/asyncHandler.ts';
+import { User, Note, Group } from '../models/index.ts';
+import { PUBLIC_NOTES_MATCH } from '../services/note.service.ts';
 
 // Karşılama sayfasındaki topluluk sayaçları. Grup içi notlar herkese açık sayılmadığı için sayılmaz.
-const getStats = asyncHandler(async (req, res) => {
+const getStats = asyncHandler(async (_req, res) => {
   const [users, notes, groups, downloadAgg] = await Promise.all([
     User.estimatedDocumentCount(),
     Note.countDocuments(PUBLIC_NOTES_MATCH),
@@ -17,4 +17,4 @@ const getStats = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = { getStats };
+export { getStats };

@@ -1,7 +1,8 @@
-const { User } = require('../models');
+import type { Types } from 'mongoose';
+import { User } from '../models/index.ts';
 
 // İki kullanıcıdan biri diğerini engellediyse true (mesajlaşma ve takip bu durumda kapalıdır).
-const isBlockedBetween = async (a, b) =>
+const isBlockedBetween = async (a: Types.ObjectId | string, b: Types.ObjectId | string) =>
   Boolean(
     await User.exists({
       $or: [
@@ -11,4 +12,4 @@ const isBlockedBetween = async (a, b) =>
     })
   );
 
-module.exports = { isBlockedBetween };
+export { isBlockedBetween };

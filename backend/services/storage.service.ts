@@ -1,7 +1,7 @@
-const fs = require('fs/promises');
-const path = require('path');
-const crypto = require('crypto');
-const cloudinary = require('cloudinary').v2;
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import { v2 as cloudinary, type UploadApiOptions, type UploadApiResponse } from 'cloudinary';
 
 // Dosya depolama katmanı. .env'de CLOUDINARY_URL varsa yeni dosyalar Cloudinary'ye, yoksa yerel diske
 // (backend/uploads) yazılır. Okuma/silme anahtarın biçimine göre doğru yere gider; böylece Cloudinary'ye
@@ -15,7 +15,6 @@ const cloudinary = require('cloudinary').v2;
 //   cloudinary:notehub/notes/abc.docx         -> Cloudinary "raw" tipi, gizli (DOCX / ZIP / RAR)
 //   https://res.cloudinary.com/.../x.png      -> Cloudinary, herkese açık avatar
 // Anahtar her zaman dosya uzantısıyla biter (önizlemenin içerik tipi buradan belirlenir).
-
 const useCloudinary = Boolean(process.env.CLOUDINARY_URL);
 // SDK, CLOUDINARY_URL ortam değişkenini kendisi okur; sadece https URL üretmesini istiyoruz.
 if (useCloudinary) cloudinary.config({ secure: true });
@@ -26,14 +25,14 @@ const CLOUDINARY_FOLDER = 'notehub';
 // Cloudinary'nin "image" olarak işleyebildiği türler: panelde küçük resimleriyle görünürler.
 const IMAGE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
 
-const UPLOAD_ROOT = path.join(__dirname, '..', 'uploads');
+const UPLOAD_ROOT = path.join(import.meta.dirname, '..', 'uploads');
 const NOTES_DIR = path.join(UPLOAD_ROOT, 'notes');
 const AVATARS_DIR = path.join(UPLOAD_ROOT, 'avatars');
 
-const randomFileName = (ext) => `${Date.now()}-${crypto.randomBytes(12).toString('hex')}${ext}`;
+const randomFileName = (ext: string) => `${Date.now()}-${crypto.randomBytes(12).toString('hex')}${ext}`;
 
 // "notes/abc.pdf" gibi bir anahtarı uploads klasörü dışına çıkamayacak şekilde mutlak yola çevirir.
-const resolveKey = (key) => {
+const resolveKey = (key: string) => {
   const fullPath = path.resolve(UPLOAD_ROOT, key);
   if (!fullPath.startsWith(UPLOAD_ROOT + path.sep)) {
     throw new Error('Invalid file path.');
@@ -43,26 +42,28 @@ const resolveKey = (key) => {
 
 // Gizli Cloudinary anahtarını SDK'nın beklediği parçalara ayırır; Cloudinary anahtarı değilse null.
 // "image" tipinde public_id uzantı içermez, "raw" tipinde içerir.
-const parseCloudinaryKey = (key) => {
+const parseCloudinaryKey = (key: string) => {
   if (key.startsWith(IMAGE_PREFIX)) {
     const file = key.slice(IMAGE_PREFIX.length);
     const ext = path.extname(file);
-    return { resourceType: 'image', publicId: file.slice(0, -ext.length), format: ext.slice(1) };
+    return { resourceType: 'image' as const, publicId: file.slice(0, -ext.length), format: ext.slice(1) };
   }
   if (key.startsWith(RAW_PREFIX)) {
-    return { resourceType: 'raw', publicId: key.slice(RAW_PREFIX.length), format: '' };
+    return { resourceType: 'raw' as const, publicId: key.slice(RAW_PREFIX.length), format: '' };
   }
   return null;
 };
 
-const uploadToCloudinary = (buffer, options) =>
-  new Promise((resolve, reject) => {
-    cloudinary.uploader.upload_stream(options, (error, result) => (error ? reject(error) : resolve(result))).end(buffer);
+const uploadToCloudinary = (buffer: Buffer, options: UploadApiOptions) =>
+  new Promise<UploadApiResponse>((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream(options, (error, result) => (error || !result ? reject(error) : resolve(result)))
+      .end(buffer);
   });
 
 // Not dosyaları "authenticated" tipinde yüklenir: doğrudan URL ile açılamaz, sadece backend tarafından
 // okunabilir. Böylece gizli grup notları /api/notes/:id/download'daki yetki kontrolünü atlayamaz.
-const saveNoteFile = async (buffer, ext) => {
+const saveNoteFile = async (buffer: Buffer, ext: string) => {
   const fileName = randomFileName(ext);
 
   if (useCloudinary) {
@@ -82,7 +83,7 @@ const saveNoteFile = async (buffer, ext) => {
 };
 
 // Avatarlar herkese açıktır; Cloudinary'de en fazla 512x512'ye küçültülerek saklanır.
-const saveAvatar = async (buffer, ext) => {
+const saveAvatar = async (buffer: Buffer, ext: string) => {
   if (useCloudinary) {
     const result = await uploadToCloudinary(buffer, {
       resource_type: 'image',
@@ -99,7 +100,7 @@ const saveAvatar = async (buffer, ext) => {
 };
 
 // Not dosyasının içeriğini Buffer olarak döndürür; dosya bulunamazsa null.
-const readNoteFile = async (key) => {
+const readNoteFile = async (key: string): Promise<Buffer | null> => {
   const cld = parseCloudinaryKey(key);
   if (cld) {
     // İmzalı teslim URL'i (cloudinary.url + sign_url) hesap güvenlik ayarları yüzünden 401 dönüyor;
@@ -118,16 +119,16 @@ const readNoteFile = async (key) => {
   try {
     return await fs.readFile(resolveKey(key));
   } catch (error) {
-    if (error.code === 'ENOENT') return null;
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
     throw error;
   }
 };
 
 // https://res.cloudinary.com/<cloud>/image/upload/v123/notehub/avatars/abc.png -> notehub/avatars/abc
-const avatarPublicId = (url) => url.match(/\/image\/upload\/(?:v\d+\/)?(.+)\.[a-z0-9]+$/i)?.[1];
+const avatarPublicId = (url: string) => url.match(/\/image\/upload\/(?:v\d+\/)?(.+)\.[a-z0-9]+$/i)?.[1];
 
 // Silme hataları (dosya zaten yoksa vb.) asıl işlemi bozmamalı; sadece loglanır.
-const removeFile = async (key) => {
+const removeFile = async (key: string | null | undefined) => {
   if (!key) return;
   try {
     const cld = parseCloudinaryKey(key);
@@ -140,8 +141,9 @@ const removeFile = async (key) => {
       await fs.unlink(resolveKey(key.replace(/^\/uploads\//, '')));
     }
   } catch (error) {
-    if (error.code !== 'ENOENT') console.error('Dosya silinemedi:', key, error.message);
+    const { code, message } = error as NodeJS.ErrnoException;
+    if (code !== 'ENOENT') console.error('Dosya silinemedi:', key, message);
   }
 };
 
-module.exports = { saveNoteFile, saveAvatar, readNoteFile, removeFile };
+export { saveNoteFile, saveAvatar, readNoteFile, removeFile };

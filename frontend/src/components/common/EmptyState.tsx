@@ -1,6 +1,14 @@
-import { FileSearch } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { FileSearch, type LucideIcon } from 'lucide-react';
 
-export default function EmptyState({ title = 'Nothing here yet', text, action, icon: Icon = FileSearch }) {
+interface EmptyStateProps {
+  title?: string;
+  text?: ReactNode;
+  action?: ReactNode;
+  icon?: LucideIcon;
+}
+
+export default function EmptyState({ title = 'Nothing here yet', text, action, icon: Icon = FileSearch }: EmptyStateProps) {
   return (
     <div className="card px-6 py-14 text-center">
       <span className="mx-auto w-12 h-12 rounded-full bg-navy-50 text-navy-500 flex items-center justify-center">

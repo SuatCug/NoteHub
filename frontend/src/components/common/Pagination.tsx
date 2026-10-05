@@ -1,6 +1,12 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import type { Pagination as PaginationInfo } from '@/types/api';
 
-export default function Pagination({ pagination, onPageChange }) {
+interface PaginationProps {
+  pagination?: Pick<PaginationInfo, 'page' | 'totalPages'> | null;
+  onPageChange: (page: number) => void;
+}
+
+export default function Pagination({ pagination, onPageChange }: PaginationProps) {
   if (!pagination || pagination.totalPages <= 1) return null;
   const { page, totalPages } = pagination;
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { Bookmark, Check, Download, Heart, Loader2, MessageCircle, Share2 } from 'lucide-react';
 import FileTypeBadge from '@/components/notes/FileTypeBadge';
 import VisibilityBadge from '@/components/notes/VisibilityBadge';
@@ -10,20 +10,24 @@ import { downloadNote } from '@/lib/downloadNote';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 import { FILE_TYPES } from '@/lib/constants';
 import { formatCount, formatFileSize, timeAgo } from '@/lib/format';
+import { compact } from '@/lib/compact';
+import type { NoteCard } from '@/types/api';
+
+type OptimisticState = Partial<Pick<NoteCard, 'isLiked' | 'likesCount' | 'isSaved'>>;
 
 const actionClass =
   'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800 disabled:opacity-50 disabled:hover:bg-transparent transition-colors';
 
 // Akıştaki sosyal medya tarzı not gönderisi: yazar, içerik, dosya eki, ders etiketleri ve etkileşim butonları.
-export default function NotePostCard({ note, index = 0 }) {
-  const token = useSelector((state) => state.auth.token);
-  const isVerified = useSelector((state) => state.auth.user?.isVerified);
+export default function NotePostCard({ note, index = 0 }: { note: NoteCard; index?: number }) {
+  const token = useAppSelector((state) => state.auth.token);
+  const isVerified = useAppSelector((state) => state.auth.user?.isVerified);
   const [toggleLike] = useToggleLikeMutation();
   const [toggleSave] = useToggleSaveMutation();
   const [registerDownload] = useRegisterDownloadMutation();
 
   // Beğeni/kaydet anında görünsün diye yerel (iyimser) durum; liste yenilenip yeni not gelince sıfırlanır.
-  const [optimistic, setOptimistic] = useState(null);
+  const [optimistic, setOptimistic] = useState<OptimisticState | null>(null);
   const [prevNote, setPrevNote] = useState(note);
   if (note !== prevNote) {
     setPrevNote(note);
@@ -66,7 +70,7 @@ export default function NotePostCard({ note, index = 0 }) {
       await downloadNote(note._id, token, note.originalName);
       registerDownload(note._id);
     } catch (err) {
-      window.alert(err.message);
+      window.alert((err as Error).message);
     } finally {
       setDownloading(false);
     }
@@ -91,11 +95,11 @@ export default function NotePostCard({ note, index = 0 }) {
     }
   };
 
-  const tags = [
+  const tags = compact<{ label: string; to: string }>([
     note.courseCode && { label: note.courseCode, to: `/?courseCode=${encodeURIComponent(note.courseCode)}` },
     note.department && { label: note.department, to: `/?department=${encodeURIComponent(note.department)}` },
     note.semester && { label: note.semester, to: `/?semester=${encodeURIComponent(note.semester)}` },
-  ].filter(Boolean);
+  ]);
 
   return (
     <article

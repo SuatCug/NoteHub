@@ -1,14 +1,15 @@
-const mongoose = require('mongoose');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
-const { Note, User } = require('../models');
-const { listNotes, assertNoteVisible, PUBLIC_NOTES_MATCH } = require('../services/note.service');
-const { assertMember } = require('../services/group.service');
-const { notify, removeNotification } = require('../services/notification.service');
-const { saveNoteFile, readNoteFile, removeFile } = require('../services/storage.service');
-const { parsePagination } = require('../utils/pagination.util');
-const { containsRegex, exactRegex, splitSearchWords, wordSearchMatch } = require('../utils/regex.util');
-const { NOTE_FILE_TYPES, getExtension, matchesSignature } = require('../utils/fileTypes.util');
+import mongoose from 'mongoose';
+import asyncHandler, { type AuthedRequest } from '../utils/asyncHandler.ts';
+import ApiError from '../utils/apiError.ts';
+import { Note, User } from '../models/index.ts';
+import { listNotes, assertNoteVisible, PUBLIC_NOTES_MATCH } from '../services/note.service.ts';
+import { assertMember } from '../services/group.service.ts';
+import { notify, removeNotification } from '../services/notification.service.ts';
+import { saveNoteFile, readNoteFile, removeFile } from '../services/storage.service.ts';
+import { parsePagination } from '../utils/pagination.util.ts';
+import { containsRegex, exactRegex, splitSearchWords, wordSearchMatch } from '../utils/regex.util.ts';
+import { NOTE_FILE_TYPES, getExtension, matchesSignature } from '../utils/fileTypes.util.ts';
+import type { NoteDocument } from '../models/note.model.ts';
 
 const USER_CARD_FIELDS = 'fullName avatarUrl university department';
 const EDITABLE_FIELDS = [
@@ -36,17 +37,27 @@ const NOTE_SEARCH_FIELDS = [
 
 // Query parametrelerinden MongoDB filtre objesi üretir.
 // q: kelime bazlı arama — her kelime not alanlarından birinde ya da yazarın adında geçmelidir.
-const buildSearchMatch = async (query) => {
-  const match = {};
-  const str = (key) => (typeof query[key] === 'string' && query[key].trim() ? query[key] : null);
+const buildSearchMatch = async (query: Record<string, unknown>) => {
+  const match: Record<string, unknown> = {};
+  const str = (key: string) => {
+    const value = query[key];
+    return typeof value === 'string' && value.trim() ? value : null;
+  };
 
-  if (str('university')) match.university = exactRegex(query.university);
-  if (str('department')) match.department = exactRegex(query.department);
-  if (str('courseCode')) match.courseCode = containsRegex(query.courseCode.replace(/\s+/g, ''));
-  if (str('courseName')) match.courseName = containsRegex(query.courseName);
-  if (str('instructorName')) match.instructorName = containsRegex(query.instructorName);
-  if (str('semester')) match.semester = containsRegex(query.semester);
-  if (str('fileType')) match.fileType = query.fileType;
+  const university = str('university');
+  const department = str('department');
+  const courseCode = str('courseCode');
+  const courseName = str('courseName');
+  const instructorName = str('instructorName');
+  const semester = str('semester');
+  const fileType = str('fileType');
+  if (university) match.university = exactRegex(university);
+  if (department) match.department = exactRegex(department);
+  if (courseCode) match.courseCode = containsRegex(courseCode.replace(/\s+/g, ''));
+  if (courseName) match.courseName = containsRegex(courseName);
+  if (instructorName) match.instructorName = containsRegex(instructorName);
+  if (semester) match.semester = containsRegex(semester);
+  if (fileType) match.fileType = fileType;
 
   const words = splitSearchWords(query.q);
   if (!words.length) return match;
@@ -55,7 +66,7 @@ const buildSearchMatch = async (query) => {
   const authorIdsPerWord = await Promise.all(
     words.map((word) => User.find({ fullName: containsRegex(word) }).distinct('_id'))
   );
-  const qMatch = wordSearchMatch(query.q, NOTE_SEARCH_FIELDS, (word, i) =>
+  const qMatch = wordSearchMatch(query.q, NOTE_SEARCH_FIELDS, (_word, i) =>
     authorIdsPerWord[i].length ? [{ author: { $in: authorIdsPerWord[i] } }] : []
   );
 
@@ -63,7 +74,7 @@ const buildSearchMatch = async (query) => {
 };
 
 // Not detay görünümü: beğeni dizisi yerine sayı + "ben beğendim mi" bilgisi döndürülür.
-const toNoteDetail = (note, viewerId) => {
+const toNoteDetail = (note: NoteDocument, viewerId: string | undefined) => {
   // fileUrl depolama konumudur, istemciye gönderilmez.
   const { likes, fileUrl, __v, ...rest } = note.toObject();
   return {
@@ -75,7 +86,7 @@ const toNoteDetail = (note, viewerId) => {
   };
 };
 
-const findNoteOrFail = async (id, select) => {
+const findNoteOrFail = async (id: string, select?: string) => {
   const query = Note.findById(id);
   if (select) query.select(select);
   const note = await query;
@@ -83,7 +94,7 @@ const findNoteOrFail = async (id, select) => {
   return note;
 };
 
-const assertOwner = (note, userId) => {
+const assertOwner = (note: NoteDocument, userId: string) => {
   if (!note.author.equals(userId)) {
     throw new ApiError(403, 'You are not allowed to perform this action.');
   }
@@ -101,8 +112,9 @@ const searchNotes = asyncHandler(async (req, res) => {
 });
 
 // Takip edilen kullanıcıların notlarından oluşan akış.
-const getFeed = asyncHandler(async (req, res) => {
+const getFeed = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = await User.findById(req.user.id).select('following');
+  if (!me) throw new ApiError(404, 'User not found.');
 
   const data = await listNotes({
     match: { author: { $in: me.following } },
@@ -128,7 +140,8 @@ const getFilterOptions = asyncHandler(async (req, res) => {
     Note.distinct('semester', PUBLIC_NOTES_MATCH),
   ]);
 
-  const sortTr = (arr) => arr.filter(Boolean).sort((a, b) => a.localeCompare(b, 'tr'));
+  const sortTr = (arr: (string | null | undefined)[]) =>
+    arr.filter((v): v is string => Boolean(v)).sort((a, b) => a.localeCompare(b, 'tr'));
 
   res.json({
     success: true,
@@ -155,7 +168,7 @@ const getNote = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { note: { ...toNoteDetail(note, req.user?.id), isSaved } } });
 });
 
-const createNote = asyncHandler(async (req, res) => {
+const createNote = asyncHandler<AuthedRequest>(async (req, res) => {
   if (!req.file) throw new ApiError(400, 'A file is required (form field: file).');
 
   const ext = getExtension(req.file.originalname);
@@ -165,6 +178,7 @@ const createNote = asyncHandler(async (req, res) => {
 
   // Üniversite / bölüm gönderilmezse kullanıcının profilindeki değerler kullanılır.
   const author = await User.findById(req.user.id).select('university department');
+  if (!author) throw new ApiError(404, 'User not found.');
   const fields = Object.fromEntries(EDITABLE_FIELDS.filter((f) => req.body[f] !== undefined).map((f) => [f, req.body[f]]));
   // Gruba paylaşım sadece o grubun üyelerine açık.
   if (req.body.group) await assertMember(req.body.group, req.user.id);
@@ -204,12 +218,12 @@ const createNote = asyncHandler(async (req, res) => {
   });
 });
 
-const updateNote = asyncHandler(async (req, res) => {
+const updateNote = asyncHandler<AuthedRequest>(async (req, res) => {
   const note = await findNoteOrFail(req.params.id);
   assertOwner(note, req.user.id);
 
   EDITABLE_FIELDS.forEach((field) => {
-    if (req.body[field] !== undefined) note[field] = req.body[field];
+    if (req.body[field] !== undefined) note.set(field, req.body[field]);
   });
   await note.save();
 
@@ -222,7 +236,7 @@ const updateNote = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Note updated.', data: { note: toNoteDetail(note, req.user.id) } });
 });
 
-const deleteNote = asyncHandler(async (req, res) => {
+const deleteNote = asyncHandler<AuthedRequest>(async (req, res) => {
   const note = await findNoteOrFail(req.params.id, '+fileUrl');
   assertOwner(note, req.user.id);
 
@@ -232,16 +246,16 @@ const deleteNote = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Note deleted.' });
 });
 
-const readExistingFile = async (note) => {
+const readExistingFile = async (note: { fileUrl: string }) => {
   const buffer = await readNoteFile(note.fileUrl);
   if (!buffer) throw new ApiError(404, 'File not found.');
   return buffer;
 };
 
 // Sayfa içi önizleme (sadece PDF ve görseller). İndirme sayacını artırmaz.
-const PREVIEW_CONTENT_TYPES = { '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png' };
+const PREVIEW_CONTENT_TYPES: Record<string, string> = { '.pdf': 'application/pdf', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png' };
 
-const previewNote = asyncHandler(async (req, res) => {
+const previewNote = asyncHandler<AuthedRequest>(async (req, res) => {
   const note = await findNoteOrFail(req.params.id, '+fileUrl');
   await assertNoteVisible(note, req.user.id);
   const contentType = PREVIEW_CONTENT_TYPES[getExtension(note.fileUrl)];
@@ -254,7 +268,7 @@ const previewNote = asyncHandler(async (req, res) => {
 });
 
 // Kredi/puan sistemi yok: doğrulanmış her kullanıcı sınırsız indirebilir.
-const downloadNote = asyncHandler(async (req, res) => {
+const downloadNote = asyncHandler<AuthedRequest>(async (req, res) => {
   const note = await findNoteOrFail(req.params.id, '+fileUrl');
   await assertNoteVisible(note, req.user.id);
   const buffer = await readExistingFile(note);
@@ -267,7 +281,7 @@ const downloadNote = asyncHandler(async (req, res) => {
   res.send(buffer);
 });
 
-const likeNote = asyncHandler(async (req, res) => {
+const likeNote = asyncHandler<AuthedRequest>(async (req, res) => {
   const target = await findNoteOrFail(req.params.id, 'group author visibility');
   await assertNoteVisible(target, req.user.id);
   const note = await Note.findByIdAndUpdate(
@@ -281,7 +295,7 @@ const likeNote = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { isLiked: true, likesCount: note.likes.length } });
 });
 
-const unlikeNote = asyncHandler(async (req, res) => {
+const unlikeNote = asyncHandler<AuthedRequest>(async (req, res) => {
   const note = await Note.findByIdAndUpdate(
     req.params.id,
     { $pull: { likes: new mongoose.Types.ObjectId(req.user.id) } },
@@ -294,19 +308,20 @@ const unlikeNote = asyncHandler(async (req, res) => {
 });
 
 // Yer imi: kaydedilen notlar sadece kullanıcının kendisine görünür.
-const saveNote = asyncHandler(async (req, res) => {
+const saveNote = asyncHandler<AuthedRequest>(async (req, res) => {
   await assertNoteVisible(await findNoteOrFail(req.params.id, 'group author visibility'), req.user.id);
   await User.updateOne({ _id: req.user.id }, { $addToSet: { savedNotes: req.params.id } });
   res.json({ success: true, data: { isSaved: true } });
 });
 
-const unsaveNote = asyncHandler(async (req, res) => {
+const unsaveNote = asyncHandler<AuthedRequest>(async (req, res) => {
   await User.updateOne({ _id: req.user.id }, { $pull: { savedNotes: req.params.id } });
   res.json({ success: true, data: { isSaved: false } });
 });
 
-const getSavedNotes = asyncHandler(async (req, res) => {
+const getSavedNotes = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = await User.findById(req.user.id).select('savedNotes');
+  if (!me) throw new ApiError(404, 'User not found.');
 
   const data = await listNotes({
     match: { _id: { $in: me.savedNotes } },
@@ -319,7 +334,7 @@ const getSavedNotes = asyncHandler(async (req, res) => {
 });
 
 // Akıştaki "Popular courses" etiketleri: ders kodu (yoksa ders adı) bazında not sayısı + beğeniye göre sıralanır.
-const getTrendingCourses = asyncHandler(async (req, res) => {
+const getTrendingCourses = asyncHandler(async (_req, res) => {
   const courses = await Note.aggregate([
     { $match: PUBLIC_NOTES_MATCH },
     {
@@ -340,7 +355,7 @@ const getTrendingCourses = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { courses } });
 });
 
-module.exports = {
+export {
   searchNotes,
   getFeed,
   getSavedNotes,

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { MailWarning } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import NoteForm from '@/components/notes/NoteForm';
@@ -9,17 +9,19 @@ import Spinner from '@/components/common/Spinner';
 import { useCreateNoteMutation } from '@/services/notesApi';
 import { useGetMyGroupsQuery } from '@/services/groupsApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import type { NoteInput } from '@/types/api';
 
 export default function UploadNotePage() {
   const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
+  const user = useAppSelector((state) => state.auth.user);
   const [createNote, { isLoading }] = useCreateNoteMutation();
   const [error, setError] = useState('');
   const [searchParams] = useSearchParams();
   // Grup sayfasındaki "Share a Note" butonundan gelindiyse o grup önceden seçili olur.
   const { data: myGroups, isLoading: groupsLoading } = useGetMyGroupsQuery({ limit: 50 }, { skip: !user?.isVerified });
   const groups = myGroups?.data?.items ?? [];
-  const preselectedGroup = groups.some((g) => g._id === searchParams.get('group')) ? searchParams.get('group') : '';
+  const groupParam = searchParams.get('group') ?? '';
+  const preselectedGroup = groups.some((g) => g._id === groupParam) ? groupParam : '';
 
   if (!user?.isVerified) {
     return (
@@ -33,11 +35,11 @@ export default function UploadNotePage() {
     );
   }
 
-  const handleSubmit = async (values, file) => {
+  const handleSubmit = async (values: NoteInput, file: File | null) => {
     setError('');
     const formData = new FormData();
     Object.entries(values).forEach(([k, v]) => v && formData.append(k, v));
-    formData.append('file', file);
+    if (file) formData.append('file', file);
     try {
       const res = await createNote(formData).unwrap();
       navigate(`/notes/${res.data.note._id}`);

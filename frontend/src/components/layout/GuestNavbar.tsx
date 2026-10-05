@@ -18,7 +18,7 @@ export default function GuestNavbar() {
 
   // Zaten karşılama sayfasındaysa (aynı #bölüm adresine tekrar tıklanınca da) doğrudan kaydırılır;
   // başka sayfadan gelindiğinde kaydırmayı ScrollToTop adresteki #bölüme göre yapar.
-  const handleSectionClick = (id) => {
+  const handleSectionClick = (id: string) => {
     if (!onLanding) return;
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.getElementById(id)?.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });

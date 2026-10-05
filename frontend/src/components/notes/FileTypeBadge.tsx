@@ -1,6 +1,7 @@
 import { FILE_TYPES } from '@/lib/constants';
+import type { FileType } from '@/types/api';
 
-export default function FileTypeBadge({ type, className = '' }) {
+export default function FileTypeBadge({ type, className = '' }: { type: FileType; className?: string }) {
   const info = FILE_TYPES[type] ?? FILE_TYPES.pdf;
   const Icon = info.icon;
   return (

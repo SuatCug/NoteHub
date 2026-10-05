@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Download, GraduationCap, Heart, Search } from 'lucide-react';
 import Logo from '@/components/layout/Logo';
 import { REQUIRE_EDU_EMAIL } from '@/lib/constants';
@@ -14,7 +15,7 @@ const FEATURES = [
 
 // Auth ekranları (Login/Register/Verify) için ortak iki panelli yerleşim.
 // Solda tanıtım paneli, sağda form paneli.
-export default function AuthLayout({ children }) {
+export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen lg:h-screen grid lg:grid-cols-2 bg-white">
       <div className="hidden lg:flex flex-col justify-between bg-gradient-to-br from-navy-800 via-navy-800 to-navy-900 p-12 text-white">

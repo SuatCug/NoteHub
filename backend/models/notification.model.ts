@@ -1,16 +1,17 @@
-const mongoose = require('mongoose');
+import { Schema, model } from 'mongoose';
 
 // Kullanıcıya gösterilen bildirimler (beğeni, yorum, takip, grup katılımı).
-// Tekrarlayan olaylar (aynı kişinin aynı notu beğenmesi gibi) tek kayıt olarak tutulur; bkz. services/notification.service.js
-const NOTIFICATION_TYPES = ['like', 'comment', 'follow', 'group_join', 'group_request', 'group_approved'];
+// Tekrarlayan olaylar (aynı kişinin aynı notu beğenmesi gibi) tek kayıt olarak tutulur; bkz. services/notification.service.ts
+export const NOTIFICATION_TYPES = ['like', 'comment', 'follow', 'group_join', 'group_request', 'group_approved'] as const;
+export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 
-const notificationSchema = new mongoose.Schema(
+const notificationSchema = new Schema(
   {
-    recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    actor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    recipient: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    actor: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     type: { type: String, required: true, enum: NOTIFICATION_TYPES },
-    note: { type: mongoose.Schema.Types.ObjectId, ref: 'Note' },
-    group: { type: mongoose.Schema.Types.ObjectId, ref: 'Group' },
+    note: { type: Schema.Types.ObjectId, ref: 'Note' },
+    group: { type: Schema.Types.ObjectId, ref: 'Group' },
     text: { type: String, maxlength: 140 }, // Yorum bildirimlerinde yorumun başı
     read: { type: Boolean, default: false },
     // Eski bildirimler 90 gün sonra MongoDB tarafından otomatik silinir (TTL index).
@@ -22,5 +23,5 @@ const notificationSchema = new mongoose.Schema(
 notificationSchema.index({ recipient: 1, createdAt: -1 });
 notificationSchema.index({ recipient: 1, read: 1 });
 
-module.exports = mongoose.model('Notification', notificationSchema);
-module.exports.NOTIFICATION_TYPES = NOTIFICATION_TYPES;
+export const Notification = model('Notification', notificationSchema);
+export default Notification;

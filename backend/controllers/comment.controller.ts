@@ -1,12 +1,12 @@
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
-const { Note } = require('../models');
-const { assertNoteVisible } = require('../services/note.service');
-const { notify, removeNotification } = require('../services/notification.service');
+import asyncHandler, { type AuthedRequest } from '../utils/asyncHandler.ts';
+import ApiError from '../utils/apiError.ts';
+import { Note } from '../models/index.ts';
+import { assertNoteVisible } from '../services/note.service.ts';
+import { notify, removeNotification } from '../services/notification.service.ts';
 
 const USER_CARD_FIELDS = 'fullName avatarUrl university department';
 
-const addComment = asyncHandler(async (req, res) => {
+const addComment = asyncHandler<AuthedRequest>(async (req, res) => {
   const note = await Note.findById(req.params.id).select('comments group author visibility');
   if (!note) throw new ApiError(404, 'Note not found.');
   await assertNoteVisible(note, req.user.id);
@@ -26,7 +26,7 @@ const addComment = asyncHandler(async (req, res) => {
 });
 
 // Yorumu sadece yorumun sahibi veya notun sahibi silebilir.
-const deleteComment = asyncHandler(async (req, res) => {
+const deleteComment = asyncHandler<AuthedRequest>(async (req, res) => {
   const note = await Note.findById(req.params.id).select('author comments');
   if (!note) throw new ApiError(404, 'Note not found.');
 
@@ -46,4 +46,4 @@ const deleteComment = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Comment deleted.', data: { commentsCount: note.comments.length } });
 });
 
-module.exports = { addComment, deleteComment };
+export { addComment, deleteComment };

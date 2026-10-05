@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { Bookmark, Compass, FileText, Users } from 'lucide-react';
 import UserAvatar from '@/components/users/UserAvatar';
 import FollowButton from '@/components/users/FollowButton';
@@ -15,7 +15,7 @@ const ACTIVE_POLL_INTERVAL_MS = 60000;
 
 // Sol menüdeki kısayollar (lg altında).
 export function MobileShortcuts() {
-  const userId = useSelector((state) => state.auth.user?.id);
+  const userId = useAppSelector((state) => state.auth.user?.id);
   const items = [
     { to: '/?all=1', icon: Compass, label: 'Explore' },
     { to: '/?tab=saved', icon: Bookmark, label: 'Saved' },

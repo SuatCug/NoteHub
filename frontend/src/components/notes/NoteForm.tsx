@@ -1,10 +1,11 @@
-import { useRef, useState } from 'react';
-import { Globe, UploadCloud, UserCheck, Users, X } from 'lucide-react';
+import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Globe, UploadCloud, UserCheck, Users, X, type LucideIcon } from 'lucide-react';
 import Alert from '@/components/common/Alert';
 import { ACCEPTED_EXTENSIONS, MAX_FILE_SIZE_MB } from '@/lib/constants';
 import { formatFileSize } from '@/lib/format';
+import type { NoteInput } from '@/types/api';
 
-const FIELDS = [
+const FIELDS: { name: keyof NoteInput; label: string; required?: boolean; placeholder?: string; span?: number }[] = [
   { name: 'title', label: 'Title', required: true, placeholder: 'e.g. Midterm summary notes', span: 2 },
   { name: 'courseName', label: 'Course name', required: true, placeholder: 'e.g. Computer Programming I' },
   { name: 'courseCode', label: 'Course code', placeholder: 'e.g. CENG101' },
@@ -14,14 +15,27 @@ const FIELDS = [
   { name: 'department', label: 'Department', required: true },
 ];
 
-const getExtension = (name) => name.slice(name.lastIndexOf('.')).toLowerCase();
+const getExtension = (name: string) => name.slice(name.lastIndexOf('.')).toLowerCase();
 
 // Notu kimlerin görebileceği: herkes, sadece takipçiler ya da (yüklerken) bir çalışma grubunun üyeleri.
-const VISIBILITY_OPTIONS = [
+type Audience = 'public' | 'followers' | 'group';
+
+const VISIBILITY_OPTIONS: { value: Audience; icon: LucideIcon; title: string; text: string }[] = [
   { value: 'public', icon: Globe, title: 'Everyone', text: 'Shown in feeds, search and on your profile.' },
   { value: 'followers', icon: UserCheck, title: 'Followers only', text: 'Only people who follow you can see and download it.' },
   { value: 'group', icon: Users, title: 'A study group', text: "Only the group's members. Not shown on your profile." },
 ];
+
+interface NoteFormProps {
+  initialValues?: Partial<NoteInput>;
+  withFile?: boolean;
+  groups?: { _id: string; name: string }[];
+  allowVisibility?: boolean;
+  onSubmit: (values: NoteInput, file: File | null) => void;
+  isLoading: boolean;
+  submitLabel: string;
+  error?: string;
+}
 
 // Not yükleme ve düzenleme formu. withFile=false ise (düzenleme) dosya alanı gösterilmez.
 // groups verilirse (kullanıcının üyesi olduğu gruplar) not bir gruba da paylaşılabilir.
@@ -35,8 +49,8 @@ export default function NoteForm({
   isLoading,
   submitLabel,
   error,
-}) {
-  const [values, setValues] = useState(() => ({
+}: NoteFormProps) {
+  const [values, setValues] = useState<NoteInput>(() => ({
     title: '',
     description: '',
     courseName: '',
@@ -51,21 +65,21 @@ export default function NoteForm({
     visibility: initialValues?.visibility || 'public',
   }));
   // Seçili kitle: grup seçiliyse "group", değilse notun görünürlüğü.
-  const audience = values.group ? 'group' : values.visibility || 'public';
-  const setAudience = (next) =>
+  const audience: Audience = values.group ? 'group' : values.visibility || 'public';
+  const setAudience = (next: Audience) =>
     setValues((v) => ({
       ...v,
       visibility: next === 'followers' ? 'followers' : 'public',
-      group: next === 'group' ? v.group || groups[0]._id : '',
+      group: next === 'group' ? v.group || groups?.[0]?._id || '' : '',
     }));
-  const [file, setFile] = useState(null);
+  const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState('');
   const [dragging, setDragging] = useState(false);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleChange = (e) => setValues((v) => ({ ...v, [e.target.name]: e.target.value }));
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setValues((v) => ({ ...v, [e.target.name]: e.target.value }));
 
-  const pickFile = (picked) => {
+  const pickFile = (picked: File | null | undefined) => {
     setFileError('');
     if (!picked) return;
     if (!ACCEPTED_EXTENSIONS.includes(getExtension(picked.name))) {
@@ -81,13 +95,13 @@ export default function NoteForm({
     setValues((v) => (v.title ? v : { ...v, title: picked.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ') }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (withFile && !file) {
       setFileError('Please choose a file to upload.');
       return;
     }
-    const trimmed = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.trim()]));
+    const trimmed = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v.trim()])) as NoteInput;
     onSubmit(trimmed, file);
   };
 
@@ -197,7 +211,7 @@ export default function NoteForm({
               onChange={handleChange}
               className="form-input mt-3"
             >
-              {groups.map((g) => (
+              {groups?.map((g) => (
                 <option key={g._id} value={g._id}>
                   {g.name}
                 </option>

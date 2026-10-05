@@ -1,7 +1,27 @@
-import { useState } from 'react';
+import { useState, type ChangeEventHandler, type ReactNode } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 
-export default function PasswordField({ id, label, value, onChange, placeholder, autoComplete, minLength, hint }) {
+interface PasswordFieldProps {
+  id: string;
+  label: ReactNode;
+  value: string;
+  onChange: ChangeEventHandler<HTMLInputElement>;
+  placeholder?: string;
+  autoComplete?: string;
+  minLength?: number;
+  hint?: ReactNode;
+}
+
+export default function PasswordField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+  autoComplete,
+  minLength,
+  hint,
+}: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
 
   return (

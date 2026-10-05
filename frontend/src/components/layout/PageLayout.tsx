@@ -1,4 +1,5 @@
-import { useSelector } from 'react-redux';
+import type { ReactNode } from 'react';
+import { useAppSelector } from '@/app/hooks';
 import Navbar from './Navbar';
 import GuestNavbar from './GuestNavbar';
 import VerifyBanner from './VerifyBanner';
@@ -7,8 +8,8 @@ import MobileTabBar from './MobileTabBar';
 
 // Auth ekranları dışındaki tüm sayfaların ortak iskeleti. Ziyaretçi, karşılama sayfasındaki sade üst çubuğu görür.
 // Giriş yapılmışsa telefonda alt sekme çubuğu çıkar; içerik onun altında kalmasın diye alttan boşluk bırakılır.
-export default function PageLayout({ children, narrow = false }) {
-  const token = useSelector((state) => state.auth.token);
+export default function PageLayout({ children, narrow = false }: { children: ReactNode; narrow?: boolean }) {
+  const token = useAppSelector((state) => state.auth.token);
 
   return (
     <div className={`min-h-screen flex flex-col ${token ? 'pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0' : ''}`}>

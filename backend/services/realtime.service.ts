@@ -1,38 +1,41 @@
 // Socket.io örneğine controller'lardan erişmek için ince bir katman.
 // Socket sunucusu başlatılmamışsa (örn. betikler, testler) emit çağrıları sessizce atlanır.
-let io = null;
+import type { Server } from 'socket.io';
+import type { IdLike } from '../types/common.ts';
+
+let io: Server | null = null;
 
 // Çevrimiçi kullanıcılar: userId -> açık bağlantı (sekme/cihaz) sayısı. Tek sunucu örneği için bellekte tutulur.
-const connections = new Map();
+const connections = new Map<string, number>();
 
-const setIo = (instance) => {
+const setIo = (instance: Server) => {
   io = instance;
 };
 
-const userRoom = (userId) => `user:${userId}`;
-const groupRoom = (groupId) => `group:${groupId}`;
+const userRoom = (userId: IdLike) => `user:${userId}`;
+const groupRoom = (groupId: IdLike) => `group:${groupId}`;
 
 // Bir ya da birden fazla kullanıcının tüm açık bağlantılarına olay gönderir.
-const emitToUsers = (userIds, event, payload = {}) => {
+const emitToUsers = (userIds: IdLike | null | undefined | (IdLike | null | undefined)[], event: string, payload: object = {}) => {
   if (!io) return;
   const ids = (Array.isArray(userIds) ? userIds : [userIds]).filter(Boolean).map(String);
   if (ids.length) io.to(ids.map(userRoom)).emit(event, payload);
 };
 
-const emitToGroup = (groupId, event, payload = {}) => {
+const emitToGroup = (groupId: IdLike | null | undefined, event: string, payload: object = {}) => {
   if (!io || !groupId) return;
   io.to(groupRoom(String(groupId))).emit(event, payload);
 };
 
 // Bağlantı eklendiğinde kullanıcı ilk kez çevrimiçi olduysa true döner.
-const addConnection = (userId) => {
+const addConnection = (userId: string) => {
   const count = (connections.get(userId) || 0) + 1;
   connections.set(userId, count);
   return count === 1;
 };
 
 // Bağlantı kapandığında kullanıcının son bağlantısıysa true döner (artık çevrimdışı).
-const removeConnection = (userId) => {
+const removeConnection = (userId: string) => {
   const count = (connections.get(userId) || 1) - 1;
   if (count <= 0) {
     connections.delete(userId);
@@ -44,7 +47,7 @@ const removeConnection = (userId) => {
 
 const getOnlineUserIds = () => [...connections.keys()];
 
-module.exports = {
+export {
   setIo,
   userRoom,
   groupRoom,

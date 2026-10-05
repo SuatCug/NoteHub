@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
-import { Compass, Plus, Search, UserRound } from 'lucide-react';
+import { useAppSelector } from '@/app/hooks';
+import { Compass, Plus, Search, UserRound, type LucideIcon } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import GroupGrid from '@/components/groups/GroupGrid';
 import Pagination from '@/components/common/Pagination';
@@ -16,7 +16,7 @@ const GROUP_SORTS = [
 ];
 
 export default function GroupsPage() {
-  const token = useSelector((state) => state.auth.token);
+  const token = useAppSelector((state) => state.auth.token);
   const [searchParams, setSearchParams] = useSearchParams();
 
   const tab = token && searchParams.get('tab') === 'mine' ? 'mine' : 'explore';
@@ -35,21 +35,21 @@ export default function GroupsPage() {
   const mine = useGetMyGroupsQuery({ page }, { skip: tab !== 'mine' });
   const { data, isLoading, isFetching, error } = tab === 'mine' ? mine : explore;
 
-  const updateParams = (changes, { keepPage = false } = {}) => {
+  const updateParams = (changes: Record<string, string>, { keepPage = false } = {}) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(changes).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
     if (!keepPage) next.delete('page');
     setSearchParams(next);
   };
 
-  const setPage = (p) => {
+  const setPage = (p: number) => {
     updateParams({ page: p > 1 ? String(p) : '' }, { keepPage: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const setTab = (t) => setSearchParams(t === 'mine' ? { tab: 'mine' } : {});
+  const setTab = (t: 'explore' | 'mine') => setSearchParams(t === 'mine' ? { tab: 'mine' } : {});
 
-  const handleSearch = (e) => {
+  const handleSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     updateParams({ q: search.trim() });
   };
@@ -145,7 +145,14 @@ export default function GroupsPage() {
   );
 }
 
-function TabButton({ active, onClick, icon: Icon, children }) {
+interface TabButtonProps {
+  active: boolean;
+  onClick: () => void;
+  icon: LucideIcon;
+  children: ReactNode;
+}
+
+function TabButton({ active, onClick, icon: Icon, children }: TabButtonProps) {
   return (
     <button
       type="button"

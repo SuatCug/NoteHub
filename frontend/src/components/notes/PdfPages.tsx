@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
+import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
 
 const PAGE_BATCH = 3;
 
 // pdf.js sadece bir PDF önizlemesi açıldığında yüklenir (ana paketi büyütmemek için).
-let pdfjsPromise;
+let pdfjsPromise: Promise<typeof import('pdfjs-dist')> | undefined;
 const loadPdfjs = () => {
   pdfjsPromise ??= Promise.all([
     import('pdfjs-dist'),
@@ -18,14 +19,14 @@ const loadPdfjs = () => {
 
 // PDF sayfalarını canvas'a çizer. Tarayıcının kendi PDF görüntüleyicisine bağlı olmadığı için
 // mobil tarayıcılarda da (Android Chrome iframe içinde PDF göstermez) aynı şekilde çalışır.
-export default function PdfPages({ blob }) {
-  const [doc, setDoc] = useState(null);
+export default function PdfPages({ blob }: { blob: Blob }) {
+  const [doc, setDoc] = useState<PDFDocumentProxy | null>(null);
   const [error, setError] = useState('');
   const [visibleCount, setVisibleCount] = useState(PAGE_BATCH);
 
   useEffect(() => {
     let cancelled = false;
-    let loadingTask;
+    let loadingTask: PDFDocumentLoadingTask | undefined;
     loadPdfjs()
       .then(async (pdfjs) => {
         loadingTask = pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) });
@@ -69,19 +70,19 @@ export default function PdfPages({ blob }) {
   );
 }
 
-function PdfPage({ doc, pageNumber }) {
-  const canvasRef = useRef(null);
+function PdfPage({ doc, pageNumber }: { doc: PDFDocumentProxy; pageNumber: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const [rendered, setRendered] = useState(false);
 
   useEffect(() => {
-    let renderTask;
+    let renderTask: RenderTask | undefined;
     let cancelled = false;
     (async () => {
       const page = await doc.getPage(pageNumber);
       const canvas = canvasRef.current;
       if (cancelled || !canvas) return;
       // Kapsayıcı genişliğine sığdır, yüksek DPI ekranlarda net görünsün diye piksel oranıyla çarp.
-      const cssWidth = canvas.parentElement.clientWidth;
+      const cssWidth = canvas.parentElement?.clientWidth ?? canvas.clientWidth;
       const baseViewport = page.getViewport({ scale: 1 });
       const scale = (cssWidth / baseViewport.width) * Math.min(window.devicePixelRatio || 1, 2);
       const viewport = page.getViewport({ scale });

@@ -1,17 +1,18 @@
-const router = require('express').Router();
-const groupController = require('../controllers/group.controller');
-const authenticate = require('../middlewares/auth.middleware');
-const { optionalAuth } = require('../middlewares/auth.middleware');
-const requireVerified = require('../middlewares/verified.middleware');
-const validate = require('../middlewares/validate.middleware');
-const { idParamRules } = require('../validations/common.validation');
-const {
+import { Router } from 'express';
+import * as groupController from '../controllers/group.controller.ts';
+import authenticate, { optionalAuth } from '../middlewares/auth.middleware.ts';
+import requireVerified from '../middlewares/verified.middleware.ts';
+import validate from '../middlewares/validate.middleware.ts';
+import { idParamRules } from '../validations/common.validation.ts';
+import {
   createGroupRules,
   updateGroupRules,
   memberParamRules,
   messageRules,
   messageParamRules,
-} = require('../validations/group.validation');
+} from '../validations/group.validation.ts';
+
+const router = Router();
 
 const verifiedOnly = [authenticate, requireVerified];
 
@@ -52,4 +53,4 @@ router.delete(
   groupController.deleteMessage
 );
 
-module.exports = router;
+export default router;

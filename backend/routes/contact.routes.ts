@@ -1,10 +1,12 @@
-const router = require('express').Router();
-const contactController = require('../controllers/contact.controller');
-const { optionalAuth } = require('../middlewares/auth.middleware');
-const validate = require('../middlewares/validate.middleware');
-const { contactRules } = require('../validations/contact.validation');
+import { Router } from 'express';
+import * as contactController from '../controllers/contact.controller.ts';
+import { optionalAuth } from '../middlewares/auth.middleware.ts';
+import validate from '../middlewares/validate.middleware.ts';
+import { contactRules } from '../validations/contact.validation.ts';
+
+const router = Router();
 
 // İletişim formu (anonim ziyaretçilere de açık)
 router.post('/', contactRules, validate, optionalAuth, contactController.sendContactMessage);
 
-module.exports = router;
+export default router;

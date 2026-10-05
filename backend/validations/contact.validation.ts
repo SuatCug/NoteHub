@@ -1,4 +1,4 @@
-const { body } = require('express-validator');
+import { body } from 'express-validator';
 
 const CONTACT_TOPICS = ['general', 'support', 'copyright', 'privacy', 'feedback'];
 
@@ -14,4 +14,4 @@ const contactRules = [
     .withMessage('Message can be at most 3000 characters.'),
 ];
 
-module.exports = { contactRules, CONTACT_TOPICS };
+export { contactRules, CONTACT_TOPICS };

@@ -1,37 +1,40 @@
-const mongoose = require('mongoose');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
-const { Group, GroupMessage, Note } = require('../models');
-const { listGroups } = require('../services/group.service');
-const { listNotes } = require('../services/note.service');
-const { notify } = require('../services/notification.service');
-const { emitToGroup } = require('../services/realtime.service');
-const { parsePagination } = require('../utils/pagination.util');
-const { wordSearchMatch } = require('../utils/regex.util');
+import mongoose from 'mongoose';
+import asyncHandler, { type AuthedRequest } from '../utils/asyncHandler.ts';
+import ApiError from '../utils/apiError.ts';
+import { Group, GroupMessage, Note } from '../models/index.ts';
+import { listGroups } from '../services/group.service.ts';
+import { listNotes } from '../services/note.service.ts';
+import { notify } from '../services/notification.service.ts';
+import { emitToGroup } from '../services/realtime.service.ts';
+import { parsePagination } from '../utils/pagination.util.ts';
+import { wordSearchMatch } from '../utils/regex.util.ts';
+import type { GroupDocument } from '../models/group.model.ts';
+import type { UserDocument } from '../models/user.model.ts';
+import type { IdLike } from '../types/common.ts';
 
 const USER_CARD_FIELDS = 'fullName avatarUrl university department';
 
-const findGroupOrFail = async (id) => {
+const findGroupOrFail = async (id: string) => {
   const group = await Group.findById(id);
   if (!group) throw new ApiError(404, 'Group not found.');
   return group;
 };
 
-const assertOwner = (group, userId) => {
+const assertOwner = (group: GroupDocument, userId: string) => {
   if (!group.owner.equals(userId)) {
     throw new ApiError(403, 'Only the group founder can do this.');
   }
 };
 
 // Özel grubun üye listesi sadece üyelere açıktır.
-const assertCanView = (group, userId) => {
+const assertCanView = (group: GroupDocument, userId: string | undefined) => {
   if (group.isPrivate && !group.hasMember(userId)) {
     throw new ApiError(403, 'This group is private. Join the group to see its content.');
   }
 };
 
 // Grup detay görünümü: üye / istek dizileri yerine sayılar + izleyiciye göre durum bilgisi.
-const toGroupDetail = async (group, viewerId) => {
+const toGroupDetail = async (group: GroupDocument, viewerId: IdLike | undefined) => {
   await group.populate('owner', USER_CARD_FIELDS);
   const notesCount = await Note.countDocuments({ group: group._id });
   const { members, joinRequests, __v, ...rest } = group.toObject();
@@ -63,7 +66,7 @@ const searchGroups = asyncHandler(async (req, res) => {
 });
 
 // Giriş yapan kullanıcının üyesi olduğu gruplar (kurduğu gruplar dahil).
-const getMyGroups = asyncHandler(async (req, res) => {
+const getMyGroups = asyncHandler<AuthedRequest>(async (req, res) => {
   const data = await listGroups({
     match: { members: new mongoose.Types.ObjectId(req.user.id) },
     sort: 'newest',
@@ -80,7 +83,7 @@ const getGroup = asyncHandler(async (req, res) => {
 });
 
 // Grubu kuran kişi otomatik olarak kurucu ve ilk üye olur.
-const createGroup = asyncHandler(async (req, res) => {
+const createGroup = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await Group.create({
     name: req.body.name,
     description: req.body.description,
@@ -96,17 +99,17 @@ const createGroup = asyncHandler(async (req, res) => {
   });
 });
 
-const updateGroup = asyncHandler(async (req, res) => {
+const updateGroup = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   assertOwner(group, req.user.id);
 
   ['name', 'description', 'isPrivate'].forEach((field) => {
-    if (req.body[field] !== undefined) group[field] = req.body[field];
+    if (req.body[field] !== undefined) group.set(field, req.body[field]);
   });
   // Grup herkese açık hale getirilirse bekleyen istekler otomatik onaylanır.
   if (!group.isPrivate && group.joinRequests.length) {
     group.members.addToSet(...group.joinRequests);
-    group.joinRequests = [];
+    group.set('joinRequests', []);
   }
   await group.save();
 
@@ -114,7 +117,7 @@ const updateGroup = asyncHandler(async (req, res) => {
 });
 
 // Grup silinince notlar silinmez, sadece grupla bağları kaldırılır. Sohbet mesajları silinir.
-const deleteGroup = asyncHandler(async (req, res) => {
+const deleteGroup = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   assertOwner(group, req.user.id);
 
@@ -128,7 +131,7 @@ const deleteGroup = asyncHandler(async (req, res) => {
 });
 
 // Herkese açık gruba doğrudan katılınır; özel gruba katılma isteği gönderilir.
-const joinGroup = asyncHandler(async (req, res) => {
+const joinGroup = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   const userId = req.user.id;
 
@@ -155,7 +158,7 @@ const joinGroup = asyncHandler(async (req, res) => {
 
 // Üye gruptan ayrılır; onay bekleyen kullanıcı ise isteğini geri çeker.
 // Kurucu gruptan ayrılamaz: önce kuruculuğu devretmeli ya da grubu silmelidir.
-const leaveGroup = asyncHandler(async (req, res) => {
+const leaveGroup = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   const userId = req.user.id;
 
@@ -187,16 +190,16 @@ const leaveGroup = asyncHandler(async (req, res) => {
 const getMembers = asyncHandler(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   assertCanView(group, req.user?.id);
-  await group.populate('members', USER_CARD_FIELDS);
+  const populated = await group.populate<{ members: UserDocument[] }>('members', USER_CARD_FIELDS);
 
-  const users = group.members
+  const users = populated.members
     .map((u) => ({ ...u.toObject(), isOwner: u._id.equals(group.owner) }))
     .sort((a, b) => Number(b.isOwner) - Number(a.isOwner));
 
   res.json({ success: true, data: { users } });
 });
 
-const removeMember = asyncHandler(async (req, res) => {
+const removeMember = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   assertOwner(group, req.user.id);
   if (group.owner.equals(req.params.userId)) throw new ApiError(400, 'The founder cannot be removed.');
@@ -209,21 +212,21 @@ const removeMember = asyncHandler(async (req, res) => {
 });
 
 // Kuruculuk sadece mevcut bir üyeye devredilebilir.
-const transferOwnership = asyncHandler(async (req, res) => {
+const transferOwnership = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   assertOwner(group, req.user.id);
   if (!group.hasMember(req.params.userId)) {
     throw new ApiError(400, 'Ownership can only be transferred to a group member.');
   }
 
-  group.owner = req.params.userId;
+  group.owner = new mongoose.Types.ObjectId(req.params.userId);
   await group.save();
 
   res.json({ success: true, message: 'Ownership transferred.', data: { group: await toGroupDetail(group, req.user.id) } });
 });
 
 // Özel grubun bekleyen katılma istekleri (sadece kurucu).
-const getJoinRequests = asyncHandler(async (req, res) => {
+const getJoinRequests = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   assertOwner(group, req.user.id);
   await group.populate('joinRequests', USER_CARD_FIELDS);
@@ -231,7 +234,7 @@ const getJoinRequests = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { users: group.joinRequests } });
 });
 
-const approveJoinRequest = asyncHandler(async (req, res) => {
+const approveJoinRequest = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   assertOwner(group, req.user.id);
   if (!group.hasPendingRequest(req.params.userId)) throw new ApiError(404, 'Join request not found.');
@@ -244,7 +247,7 @@ const approveJoinRequest = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Join request approved.', data: { membersCount: group.members.length } });
 });
 
-const rejectJoinRequest = asyncHandler(async (req, res) => {
+const rejectJoinRequest = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   assertOwner(group, req.user.id);
   if (!group.hasPendingRequest(req.params.userId)) throw new ApiError(404, 'Join request not found.');
@@ -274,7 +277,7 @@ const getGroupNotes = asyncHandler(async (req, res) => {
 const MESSAGE_LIMIT = 100;
 
 // Grup sohbeti: sadece üyeler. Son 100 mesaj eskiden yeniye sıralı döner (istemci periyodik olarak yeniler).
-const getMessages = asyncHandler(async (req, res) => {
+const getMessages = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   if (!group.hasMember(req.user.id)) throw new ApiError(403, 'Only group members can see the chat.');
 
@@ -286,7 +289,7 @@ const getMessages = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { messages: messages.reverse() } });
 });
 
-const sendMessage = asyncHandler(async (req, res) => {
+const sendMessage = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   if (!group.hasMember(req.user.id)) throw new ApiError(403, 'Only group members can write in the chat.');
 
@@ -298,7 +301,7 @@ const sendMessage = asyncHandler(async (req, res) => {
 });
 
 // Mesajı yazan kişi veya grubun kurucusu silebilir.
-const deleteMessage = asyncHandler(async (req, res) => {
+const deleteMessage = asyncHandler<AuthedRequest>(async (req, res) => {
   const group = await findGroupOrFail(req.params.id);
   const message = await GroupMessage.findOne({ _id: req.params.messageId, group: group._id });
   if (!message) throw new ApiError(404, 'Message not found.');
@@ -312,7 +315,7 @@ const deleteMessage = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Message deleted.' });
 });
 
-module.exports = {
+export {
   searchGroups,
   getMyGroups,
   getGroup,

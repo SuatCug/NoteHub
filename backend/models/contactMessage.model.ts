@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // İletişim formundan gelen mesajlar. Şimdilik veritabanında saklanır (yönetim paneli / e-posta bildirimi yok).
 const contactMessageSchema = new mongoose.Schema(
@@ -14,4 +14,5 @@ const contactMessageSchema = new mongoose.Schema(
   { timestamps: { createdAt: true, updatedAt: false } }
 );
 
-module.exports = mongoose.model('ContactMessage', contactMessageSchema);
+export const ContactMessage = mongoose.model('ContactMessage', contactMessageSchema);
+export default ContactMessage;

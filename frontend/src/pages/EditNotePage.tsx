@@ -6,18 +6,19 @@ import Spinner from '@/components/common/Spinner';
 import EmptyState from '@/components/common/EmptyState';
 import { useGetNoteQuery, useUpdateNoteMutation } from '@/services/notesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import type { NoteInput } from '@/types/api';
 
-const EDITABLE = ['title', 'description', 'courseName', 'courseCode', 'instructorName', 'semester', 'university', 'department', 'visibility'];
+const EDITABLE = ['title', 'description', 'courseName', 'courseCode', 'instructorName', 'semester', 'university', 'department', 'visibility'] as const satisfies readonly (keyof NoteInput)[];
 
 export default function EditNotePage() {
-  const { id } = useParams();
+  const { id = '' } = useParams();
   const navigate = useNavigate();
   const { data, isLoading, error: loadError } = useGetNoteQuery(id);
   const [updateNote, { isLoading: saving }] = useUpdateNoteMutation();
   const [error, setError] = useState('');
 
   if (isLoading) return <PageLayout><Spinner /></PageLayout>;
-  if (loadError) {
+  if (loadError || !data) {
     return (
       <PageLayout narrow>
         <EmptyState title="Note not found" action={<Link to="/" className="btn-primary">Back to notes</Link>} />
@@ -28,7 +29,7 @@ export default function EditNotePage() {
   const note = data.data.note;
   if (!note.isOwner) return <Navigate to={`/notes/${id}`} replace />;
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (values: NoteInput) => {
     setError('');
     try {
       await updateNote({ id, ...values }).unwrap();
@@ -44,7 +45,7 @@ export default function EditNotePage() {
       <p className="text-sm text-gray-500 mt-1">The file can't be changed; upload a new note to share a different file.</p>
       <div className="card p-5 sm:p-7 mt-6">
         <NoteForm
-          initialValues={Object.fromEntries(EDITABLE.map((k) => [k, note[k] ?? '']))}
+          initialValues={Object.fromEntries(EDITABLE.map((k) => [k, note[k] ?? ''])) as Partial<NoteInput>}
           withFile={false}
           // Gruba paylaşılmış notun görünürlüğünü grup belirler.
           allowVisibility={!note.group}

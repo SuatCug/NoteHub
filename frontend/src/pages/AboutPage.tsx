@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { BadgeCheck, HeartHandshake, Lock, Sparkles, Upload, Users } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PageHeader from '@/components/layout/PageHeader';
@@ -30,7 +30,7 @@ const VALUES = [
 ];
 
 export default function AboutPage() {
-  const token = useSelector((state) => state.auth.token);
+  const token = useAppSelector((state) => state.auth.token);
   // Not listesi ziyaretçiye kapalı olduğu için sayılar herkese açık /stats endpoint'inden alınır.
   const { data } = useGetStatsQuery();
 

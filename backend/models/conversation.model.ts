@@ -1,15 +1,15 @@
-const mongoose = require('mongoose');
+import { Schema, model, type HydratedDocumentFromSchema, type Types } from 'mongoose';
 
 // İki kullanıcı arasındaki birebir konuşma. Her kullanıcı çifti için tek konuşma olur (participantsKey benzersiz).
-const conversationSchema = new mongoose.Schema(
+const conversationSchema = new Schema(
   {
-    participants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }],
+    participants: [{ type: Schema.Types.ObjectId, ref: 'User', required: true }],
     // Sıralı iki kullanıcı id'si ("a:b"): aynı çift için ikinci konuşma açılmasını engeller.
     participantsKey: { type: String, required: true, unique: true },
     // Konuşma listesinde gösterilen son mesaj özeti. Henüz mesaj yoksa konuşma listede görünmez.
     lastMessage: {
       text: { type: String, default: '' },
-      sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      sender: { type: Schema.Types.ObjectId, ref: 'User' },
       hasNote: { type: Boolean, default: false },
       createdAt: { type: Date },
     },
@@ -20,19 +20,26 @@ const conversationSchema = new mongoose.Schema(
     // yeni mesaj gelince konuşma listesinde tekrar belirir.
     clearedAt: { type: Map, of: Date, default: {} },
   },
-  { timestamps: { createdAt: true, updatedAt: false } }
+  {
+    timestamps: { createdAt: true, updatedAt: false },
+    statics: {
+      keyFor(a: Types.ObjectId | string, b: Types.ObjectId | string) {
+        return [String(a), String(b)].sort().join(':');
+      },
+    },
+    methods: {
+      hasParticipant(userId: Types.ObjectId | string) {
+        return this.participants.some((id) => id.equals(userId));
+      },
+      otherParticipant(userId: Types.ObjectId | string) {
+        return this.participants.find((id) => !id.equals(userId));
+      },
+    },
+  }
 );
 
 conversationSchema.index({ participants: 1, lastMessageAt: -1 });
 
-conversationSchema.statics.keyFor = (a, b) => [String(a), String(b)].sort().join(':');
-
-conversationSchema.methods.hasParticipant = function hasParticipant(userId) {
-  return this.participants.some((id) => id.equals(userId));
-};
-
-conversationSchema.methods.otherParticipant = function otherParticipant(userId) {
-  return this.participants.find((id) => !id.equals(userId));
-};
-
-module.exports = mongoose.model('Conversation', conversationSchema);
+export const Conversation = model('Conversation', conversationSchema);
+export type ConversationDocument = HydratedDocumentFromSchema<typeof conversationSchema>;
+export default Conversation;

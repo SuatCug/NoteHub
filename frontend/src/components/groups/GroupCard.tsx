@@ -2,8 +2,9 @@ import { Link } from 'react-router-dom';
 import { Crown, FileText, Lock, Users } from 'lucide-react';
 import UserAvatar from '@/components/users/UserAvatar';
 import { formatCount } from '@/lib/format';
+import type { GroupCard as GroupCardData } from '@/types/api';
 
-export default function GroupCard({ group, index = 0 }) {
+export default function GroupCard({ group, index = 0 }: { group: GroupCardData; index?: number }) {
   return (
     <article
       className="card card-enter relative flex flex-col min-w-0 p-5 hover:shadow-md hover:border-navy-100 transition-all"

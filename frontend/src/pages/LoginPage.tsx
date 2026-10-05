@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useAppDispatch } from '@/app/hooks';
 import AuthLayout from '@/components/auth/AuthLayout';
 import PasswordField from '@/components/auth/PasswordField';
 import Alert from '@/components/common/Alert';
@@ -13,14 +13,14 @@ import { EMAIL_PLACEHOLDER } from '@/lib/constants';
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [login, { isLoading }] = useLoginMutation();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     try {

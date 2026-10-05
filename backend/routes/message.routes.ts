@@ -1,11 +1,13 @@
-const router = require('express').Router();
-const messageController = require('../controllers/message.controller');
-const authenticate = require('../middlewares/auth.middleware');
-const requireVerified = require('../middlewares/verified.middleware');
-const validate = require('../middlewares/validate.middleware');
-const rateLimit = require('../middlewares/rateLimit.middleware');
-const { idParamRules } = require('../validations/common.validation');
-const { startConversationRules, sendMessageRules, messageParamRules } = require('../validations/message.validation');
+import { Router } from 'express';
+import * as messageController from '../controllers/message.controller.ts';
+import authenticate from '../middlewares/auth.middleware.ts';
+import requireVerified from '../middlewares/verified.middleware.ts';
+import validate from '../middlewares/validate.middleware.ts';
+import rateLimit from '../middlewares/rateLimit.middleware.ts';
+import { idParamRules } from '../validations/common.validation.ts';
+import { startConversationRules, sendMessageRules, messageParamRules } from '../validations/message.validation.ts';
+
+const router = Router();
 
 // Spam'e karşı: kullanıcı başına dakikada en fazla 20 mesaj / 10 yeni konuşma.
 const messageLimit = rateLimit({ windowMs: 60 * 1000, max: 20, message: 'You are sending messages too fast. Please wait a moment.' });
@@ -37,4 +39,4 @@ router.delete(
   messageController.deleteMessage
 );
 
-module.exports = router;
+export default router;

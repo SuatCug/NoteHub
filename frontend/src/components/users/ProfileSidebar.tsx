@@ -1,13 +1,14 @@
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Download, FileText, Heart, Pencil, Upload, Users } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Heart, Pencil, Upload, Users, type LucideIcon } from 'lucide-react';
 import UserAvatar from './UserAvatar';
 import FollowButton from './FollowButton';
 import MessageButton from '@/components/messages/MessageButton';
 import { formatCount, formatDate } from '@/lib/format';
+import type { ProfileData } from '@/types/api';
 
 // Kullanıcının alt sayfalarındaki (tüm notlar, takipçiler, takip edilenler) sol panel.
 // profile: GET /users/:id cevabındaki data ({ user, stats, isFollowing, isMe }).
-export default function ProfileSidebar({ profile }) {
+export default function ProfileSidebar({ profile }: { profile: ProfileData }) {
   const { user, stats, isFollowing, isBlocked, isMe } = profile;
 
   return (
@@ -59,7 +60,15 @@ export default function ProfileSidebar({ profile }) {
 }
 
 // to verilirse istatistik kutusu ilgili alt sayfaya bağlantı olur.
-function SideStat({ icon: Icon, label, value, to, wide = false }) {
+interface SideStatProps {
+  icon: LucideIcon;
+  label: string;
+  value: number;
+  to?: string;
+  wide?: boolean;
+}
+
+function SideStat({ icon: Icon, label, value, to, wide = false }: SideStatProps) {
   const content = (
     <>
       <dt className="flex items-center gap-1 text-[11px] text-gray-500">

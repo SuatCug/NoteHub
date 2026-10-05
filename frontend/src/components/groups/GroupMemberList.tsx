@@ -5,9 +5,17 @@ import EmptyState from '@/components/common/EmptyState';
 import Spinner from '@/components/common/Spinner';
 import { useRemoveGroupMemberMutation, useTransferGroupOwnershipMutation } from '@/services/groupsApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import type { UserCard } from '@/types/api';
+
+interface GroupMemberListProps {
+  groupId: string;
+  users?: UserCard[];
+  isLoading?: boolean;
+  canManage?: boolean;
+}
 
 // Grup üyeleri. Kurucu en üstte işaretlenir; kurucuya üye çıkarma ve kuruculuğu devretme seçenekleri gösterilir.
-export default function GroupMemberList({ groupId, users, isLoading, canManage }) {
+export default function GroupMemberList({ groupId, users, isLoading, canManage }: GroupMemberListProps) {
   const [removeMember, { isLoading: removing }] = useRemoveGroupMemberMutation();
   const [transferOwnership, { isLoading: transferring }] = useTransferGroupOwnershipMutation();
   const busy = removing || transferring;
@@ -15,7 +23,7 @@ export default function GroupMemberList({ groupId, users, isLoading, canManage }
   if (isLoading) return <Spinner />;
   if (!users?.length) return <EmptyState icon={Users} title="No members yet" />;
 
-  const run = async (action, message) => {
+  const run = async (action: () => { unwrap: () => Promise<unknown> }, message: string) => {
     if (!window.confirm(message)) return;
     try {
       await action().unwrap();

@@ -8,9 +8,10 @@ import Alert from '@/components/common/Alert';
 import EmptyState from '@/components/common/EmptyState';
 import { useDeleteGroupMutation, useGetGroupQuery, useUpdateGroupMutation } from '@/services/groupsApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import type { GroupInput } from '@/types/api';
 
 export default function EditGroupPage() {
-  const { id } = useParams();
+  const { id = '' } = useParams();
   const navigate = useNavigate();
   const { data, isLoading, error: loadError } = useGetGroupQuery(id);
   const [updateGroup, { isLoading: saving }] = useUpdateGroupMutation();
@@ -19,7 +20,7 @@ export default function EditGroupPage() {
   const [deleteError, setDeleteError] = useState('');
 
   if (isLoading) return <PageLayout><Spinner /></PageLayout>;
-  if (loadError) {
+  if (loadError || !data) {
     return (
       <PageLayout narrow>
         <EmptyState title="Group not found" action={<Link to="/groups" className="btn-primary">Back to groups</Link>} />
@@ -30,7 +31,7 @@ export default function EditGroupPage() {
   const group = data.data.group;
   if (!group.isOwner) return <Navigate to={`/groups/${id}`} replace />;
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (values: GroupInput) => {
     setError('');
     try {
       await updateGroup({ id, ...values }).unwrap();

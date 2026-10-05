@@ -1,13 +1,14 @@
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { Clock, LogOut, UserPlus } from 'lucide-react';
 import { useToggleMembershipMutation } from '@/services/groupsApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import type { GroupCard } from '@/types/api';
 
 // Üye değilse katıl (özel grupta istek gönder), bekleyen istek varsa geri çek, üyeyse ayrıl.
-export default function JoinGroupButton({ group }) {
-  const token = useSelector((state) => state.auth.token);
-  const isVerified = useSelector((state) => state.auth.user?.isVerified);
+export default function JoinGroupButton({ group }: { group: Pick<GroupCard, '_id' | 'isMember' | 'isPending' | 'isPrivate'> }) {
+  const token = useAppSelector((state) => state.auth.token);
+  const isVerified = useAppSelector((state) => state.auth.user?.isVerified);
   const navigate = useNavigate();
   const [toggleMembership, { isLoading }] = useToggleMembershipMutation();
   const { _id: id, isMember, isPending, isPrivate } = group;
@@ -24,7 +25,7 @@ export default function JoinGroupButton({ group }) {
     }
   };
 
-  const needsVerify = token && !isVerified && !leave;
+  const needsVerify = Boolean(token && !isVerified && !leave);
 
   let icon = <UserPlus size={16} />;
   let label = isPrivate ? 'Request to Join' : 'Join Group';

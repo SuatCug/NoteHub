@@ -1,7 +1,8 @@
-const ApiError = require('../utils/apiError');
+import type { RequestHandler } from 'express';
+import ApiError from '../utils/apiError.ts';
 
 // Sadece .edu.tr e-postasını doğrulamış kullanıcılara izin verir. authenticate'ten sonra kullanılmalıdır.
-const requireVerified = (req, res, next) => {
+const requireVerified: RequestHandler = (req, _res, next) => {
   if (!req.user) {
     return next(new ApiError(401, 'Authentication required.'));
   }
@@ -11,4 +12,4 @@ const requireVerified = (req, res, next) => {
   next();
 };
 
-module.exports = requireVerified;
+export default requireVerified;

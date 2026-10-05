@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { Download, Heart, MessageCircle, Pencil, Trash2, UserRound, Users } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Spinner from '@/components/common/Spinner';
@@ -19,25 +19,29 @@ import {
   useToggleLikeMutation,
 } from '@/services/notesApi';
 import { downloadNote } from '@/lib/downloadNote';
-import { getErrorMessage } from '@/lib/getErrorMessage';
+import { getErrorMessage, isNotFound } from '@/lib/getErrorMessage';
+import { compact } from '@/lib/compact';
+import type { NoteDetail } from '@/types/api';
 import { formatCount, formatDate, formatFileSize, pluralize } from '@/lib/format';
 
 // "#ceng101" gibi etiket metni: Türkçe karakterler korunur, boşluklar kaldırılır.
-const toTag = (value) => `#${value.toLocaleLowerCase('tr').replace(/\s+/g, '')}`;
+const toTag = (value: string) => `#${value.toLocaleLowerCase('tr').replace(/\s+/g, '')}`;
 
 // Not bilgilerinden tıklanabilir etiketler türetilir; her biri ilgili filtreyle aramayı açar.
-const buildTags = (note) =>
-  [
+type NoteTag = { label: string; params: Record<string, string> };
+
+const buildTags = (note: NoteDetail) =>
+  compact<NoteTag>([
     note.courseCode && { label: toTag(note.courseCode), params: { courseCode: note.courseCode } },
     { label: toTag(note.department), params: { department: note.department } },
     { label: toTag(note.university), params: { university: note.university } },
     note.semester && { label: toTag(note.semester), params: { semester: note.semester } },
-  ].filter(Boolean);
+  ]);
 
 export default function NoteDetailPage() {
-  const { id } = useParams();
+  const { id = '' } = useParams();
   const navigate = useNavigate();
-  const { token, user } = useSelector((state) => state.auth);
+  const { token, user } = useAppSelector((state) => state.auth);
   const { data, isLoading, error } = useGetNoteQuery(id);
   const [toggleLike] = useToggleLikeMutation();
   const [deleteNote, { isLoading: deleting }] = useDeleteNoteMutation();
@@ -46,12 +50,12 @@ export default function NoteDetailPage() {
   const [actionError, setActionError] = useState('');
 
   if (isLoading) return <PageLayout><Spinner /></PageLayout>;
-  if (error) {
+  if (error || !data) {
     return (
       <PageLayout narrow>
         <EmptyState
-          title={error.status === 404 ? 'Note not found' : 'Could not load note'}
-          text={error.status === 404 ? 'This note may have been deleted or never existed.' : getErrorMessage(error)}
+          title={isNotFound(error) ? 'Note not found' : 'Could not load note'}
+          text={isNotFound(error) ? 'This note may have been deleted or never existed.' : getErrorMessage(error)}
           action={<Link to="/" className="btn-primary">Back to notes</Link>}
         />
       </PageLayout>
@@ -82,7 +86,7 @@ export default function NoteDetailPage() {
       await downloadNote(note._id, token, note.originalName);
       registerDownload(note._id);
     } catch (err) {
-      setActionError(err.message);
+      setActionError((err as Error).message);
     } finally {
       setDownloading(false);
     }
@@ -101,20 +105,20 @@ export default function NoteDetailPage() {
     if (!window.confirm('Are you sure you want to permanently delete this note?')) return;
     try {
       await deleteNote(note._id).unwrap();
-      navigate(`/users/${user.id}`, { replace: true });
+      navigate(user ? `/users/${user.id}` : '/', { replace: true });
     } catch (err) {
       setActionError(getErrorMessage(err));
     }
   };
 
-  const infoRows = [
+  const infoRows = compact<[label: string, value: string]>([
     ['Course', note.courseName],
     note.courseCode && ['Course code', note.courseCode],
     ['University', note.university],
     ['Department', note.department],
     note.instructorName && ['Instructor', note.instructorName],
     note.semester && ['Semester', note.semester],
-  ].filter(Boolean);
+  ]);
 
   return (
     <PageLayout>

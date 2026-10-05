@@ -1,5 +1,5 @@
-const { param } = require('express-validator');
+import { param } from 'express-validator';
 
 const idParamRules = [param('id').isMongoId().withMessage('Invalid record id.')];
 
-module.exports = { idParamRules };
+export { idParamRules };

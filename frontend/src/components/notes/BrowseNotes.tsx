@@ -15,7 +15,7 @@ const FILTER_KEYS = ['q', 'university', 'department', 'semester', 'fileType', 'c
 const PREVIEW_LIMIT = 12;
 
 // Not arama / filtreleme / tüm notlar görünümü (Explore): giriş yapmış kullanıcının akışında orta sütunda gösterilir.
-export default function BrowseNotes({ gridClassName }) {
+export default function BrowseNotes({ gridClassName }: { gridClassName?: string }) {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const page = Number(searchParams.get('page')) || 1;
@@ -28,19 +28,19 @@ export default function BrowseNotes({ gridClassName }) {
   const { data, isLoading, isFetching, error } = useGetNotesQuery({ ...filters, ...listParams });
 
   // Filtre değişince ilk sayfaya dönülür.
-  const updateParams = (changes, { keepPage = false } = {}) => {
+  const updateParams = (changes: Record<string, string>, { keepPage = false } = {}) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(changes).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
     if (!keepPage) next.delete('page');
     setSearchParams(next);
   };
 
-  const setPage = (p) => {
+  const setPage = (p: number) => {
     updateParams({ page: p > 1 ? String(p) : '' }, { keepPage: true });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const setShowAll = (value) => {
+  const setShowAll = (value: boolean) => {
     updateParams({ all: value ? '1' : '' });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

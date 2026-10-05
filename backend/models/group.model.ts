@@ -1,28 +1,57 @@
-const mongoose = require('mongoose');
+import { Schema, model, type HydratedDocument, type Model, type Types } from 'mongoose';
+import type { IdLike } from '../types/common.ts';
 
-const groupSchema = new mongoose.Schema(
+export interface IGroup {
+  name: string;
+  description: string;
+  owner: Types.ObjectId;
+  members: Types.ObjectId[];
+  isPrivate: boolean;
+  joinRequests: Types.ObjectId[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface IGroupMethods {
+  hasMember(userId: IdLike | undefined): boolean;
+  hasPendingRequest(userId: IdLike | undefined): boolean;
+}
+
+// Dokümanda dizi alanları Mongoose dizisidir (addToSet / pull kullanılabilir).
+type GroupDocumentOverrides = {
+  members: Types.Array<Types.ObjectId>;
+  joinRequests: Types.Array<Types.ObjectId>;
+};
+
+type GroupModel = Model<IGroup, object, IGroupMethods & GroupDocumentOverrides>;
+export type GroupDocument = HydratedDocument<IGroup, IGroupMethods & GroupDocumentOverrides>;
+
+const groupSchema = new Schema<IGroup, GroupModel, IGroupMethods>(
   {
     name: { type: String, required: true, trim: true, maxlength: 80 },
     description: { type: String, default: '', trim: true, maxlength: 1000 },
     // Grubun kurucusu: grubu düzenleyebilir, silebilir ve üyeleri çıkarabilir. Kurucu da members içindedir.
-    owner: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    members: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true }],
+    owner: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    members: [{ type: Schema.Types.ObjectId, ref: 'User', index: true }],
     // Özel grup: katılmak için kurucunun onayı gerekir; notlar, üyeler ve sohbet sadece üyelere görünür.
     isPrivate: { type: Boolean, default: false },
     // Özel gruba gönderilmiş, kurucunun onayını bekleyen katılma istekleri.
-    joinRequests: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    joinRequests: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    methods: {
+      hasMember(userId) {
+        return Boolean(userId) && this.members.some((id) => id.equals(userId));
+      },
+      hasPendingRequest(userId) {
+        return Boolean(userId) && this.joinRequests.some((id) => id.equals(userId));
+      },
+    },
+  }
 );
 
 groupSchema.index({ createdAt: -1 });
 
-groupSchema.methods.hasMember = function hasMember(userId) {
-  return Boolean(userId) && this.members.some((id) => id.equals(userId));
-};
-
-groupSchema.methods.hasPendingRequest = function hasPendingRequest(userId) {
-  return Boolean(userId) && this.joinRequests.some((id) => id.equals(userId));
-};
-
-module.exports = mongoose.model('Group', groupSchema);
+export const Group = model<IGroup, GroupModel>('Group', groupSchema);
+export default Group;

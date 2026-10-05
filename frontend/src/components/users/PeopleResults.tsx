@@ -9,12 +9,12 @@ import { pluralize } from '@/lib/format';
 const PREVIEW_COUNT = 5;
 const MAX_RESULTS = 50;
 
-export default function PeopleResults({ query }) {
+export default function PeopleResults({ query }: { query: string }) {
   const [expanded, setExpanded] = useState(false);
   const { data, isFetching } = useSearchUsersQuery({ q: query, limit: MAX_RESULTS });
 
   const users = data?.data?.users;
-  if (!users?.length) return null;
+  if (!data || !users?.length) return null;
 
   const total = data.data.pagination.total;
   const visible = expanded ? users : users.slice(0, PREVIEW_COUNT);

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useAppDispatch, useAppSelector } from '@/app/hooks';
 import { CheckCircle2, Loader2, LogOut, MailCheck, XCircle } from 'lucide-react';
 import AuthLayout from '@/components/auth/AuthLayout';
 import Alert from '@/components/common/Alert';
@@ -17,10 +17,10 @@ const VERIFY_CHECK_INTERVAL_MS = 5000;
 export default function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const authToken = useSelector((state) => state.auth.token);
-  const user = useSelector((state) => state.auth.user);
+  const authToken = useAppSelector((state) => state.auth.token);
+  const user = useAppSelector((state) => state.auth.user);
   const waitingForVerification = Boolean(!token && authToken && user && !user.isVerified);
   // Bağlantı başka yerde tıklanırsa yakalamak için oturumdaki kullanıcı birkaç saniyede bir yenilenir.
   useGetMeQuery(undefined, { skip: !waitingForVerification, pollingInterval: VERIFY_CHECK_INTERVAL_MS });
@@ -60,7 +60,7 @@ export default function VerifyEmailPage() {
   const handleResend = async () => {
     try {
       const res = await resend().unwrap();
-      setMessage(res.message);
+      setMessage(res.message ?? '');
     } catch (err) {
       setMessage(getErrorMessage(err));
     }

@@ -1,14 +1,21 @@
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { MessageCircle } from 'lucide-react';
 import { useStartConversationMutation } from '@/services/messagesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 
 // Kullanıcıyla konuşmayı açıp mesajlar sayfasına götürür. noteId verilirse ("Ask the author")
 // not, ilk mesaja eklenmek üzere mesaj kutusuna iliştirilir.
-export default function MessageButton({ userId, noteId, label = 'Message', className = 'btn-secondary' }) {
-  const token = useSelector((state) => state.auth.token);
-  const isVerified = useSelector((state) => state.auth.user?.isVerified);
+interface MessageButtonProps {
+  userId: string;
+  noteId?: string;
+  label?: string;
+  className?: string;
+}
+
+export default function MessageButton({ userId, noteId, label = 'Message', className = 'btn-secondary' }: MessageButtonProps) {
+  const token = useAppSelector((state) => state.auth.token);
+  const isVerified = useAppSelector((state) => state.auth.user?.isVerified);
   const navigate = useNavigate();
   const [startConversation, { isLoading }] = useStartConversationMutation();
 
@@ -26,7 +33,7 @@ export default function MessageButton({ userId, noteId, label = 'Message', class
     <button
       type="button"
       onClick={handleClick}
-      disabled={isLoading || (token && !isVerified)}
+      disabled={isLoading || Boolean(token && !isVerified)}
       title={token && !isVerified ? 'Verify your email to send messages' : undefined}
       className={className}
     >

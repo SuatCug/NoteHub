@@ -1,8 +1,10 @@
-const router = require('express').Router();
-const notificationController = require('../controllers/notification.controller');
-const authenticate = require('../middlewares/auth.middleware');
-const validate = require('../middlewares/validate.middleware');
-const { idParamRules } = require('../validations/common.validation');
+import { Router } from 'express';
+import * as notificationController from '../controllers/notification.controller.ts';
+import authenticate from '../middlewares/auth.middleware.ts';
+import validate from '../middlewares/validate.middleware.ts';
+import { idParamRules } from '../validations/common.validation.ts';
+
+const router = Router();
 
 router.use(authenticate);
 
@@ -11,4 +13,4 @@ router.get('/unread-count', notificationController.getUnreadCount);
 router.post('/read-all', notificationController.markAllRead);
 router.patch('/:id/read', idParamRules, validate, notificationController.markRead);
 
-module.exports = router;
+export default router;

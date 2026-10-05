@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { Download, MessagesSquare, Search, Upload, UserPlus, Users } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PageHeader from '@/components/layout/PageHeader';
@@ -39,7 +39,7 @@ const STEPS = [
 ];
 
 export default function HowItWorksPage() {
-  const token = useSelector((state) => state.auth.token);
+  const token = useAppSelector((state) => state.auth.token);
 
   return (
     <PageLayout>

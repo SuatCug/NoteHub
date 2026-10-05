@@ -1,21 +1,22 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { Send, Trash2 } from 'lucide-react';
 import Alert from '@/components/common/Alert';
 import UserAvatar from '@/components/users/UserAvatar';
 import { useAddCommentMutation, useDeleteCommentMutation } from '@/services/notesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 import { timeAgo } from '@/lib/format';
+import type { Comment, NoteDetail } from '@/types/api';
 
-export default function CommentSection({ note }) {
-  const user = useSelector((state) => state.auth.user);
+export default function CommentSection({ note }: { note: NoteDetail }) {
+  const user = useAppSelector((state) => state.auth.user);
   const [addComment, { isLoading: adding }] = useAddCommentMutation();
   const [deleteComment] = useDeleteCommentMutation();
   const [text, setText] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     try {
@@ -26,7 +27,7 @@ export default function CommentSection({ note }) {
     }
   };
 
-  const handleDelete = async (commentId) => {
+  const handleDelete = async (commentId: string) => {
     if (!window.confirm('Are you sure you want to delete this comment?')) return;
     try {
       await deleteComment({ id: note._id, commentId }).unwrap();
@@ -36,7 +37,7 @@ export default function CommentSection({ note }) {
   };
 
   // Yorumu, yorumun sahibi veya notun sahibi silebilir (backend ile aynı kural).
-  const canDelete = (comment) => user && (comment.user?._id === user.id || note.isOwner);
+  const canDelete = (comment: Comment) => Boolean(user && (comment.user?._id === user.id || note.isOwner));
 
   return (
     <section id="comments" className="card p-5 scroll-mt-24" aria-labelledby="comments-title">

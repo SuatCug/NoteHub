@@ -1,16 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { MailWarning } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import GroupForm from '@/components/groups/GroupForm';
 import EmptyState from '@/components/common/EmptyState';
 import { useCreateGroupMutation } from '@/services/groupsApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import type { GroupInput } from '@/types/api';
 
 export default function CreateGroupPage() {
   const navigate = useNavigate();
-  const user = useSelector((state) => state.auth.user);
+  const user = useAppSelector((state) => state.auth.user);
   const [createGroup, { isLoading }] = useCreateGroupMutation();
   const [error, setError] = useState('');
 
@@ -26,7 +27,7 @@ export default function CreateGroupPage() {
     );
   }
 
-  const handleSubmit = async (values) => {
+  const handleSubmit = async (values: GroupInput) => {
     setError('');
     try {
       const res = await createGroup(values).unwrap();

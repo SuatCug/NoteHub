@@ -1,32 +1,32 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useAppDispatch } from '@/app/hooks';
 import AuthLayout from '@/components/auth/AuthLayout';
 import PasswordField from '@/components/auth/PasswordField';
 import Alert from '@/components/common/Alert';
-import { useRegisterMutation } from '@/services/authApi';
+import { useRegisterMutation, type RegisterPayload } from '@/services/authApi';
 import { baseApi, SESSION_TAGS } from '@/services/baseApi';
 import { setCredentials } from '@/app/authSlice';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 import { EDU_EMAIL_REGEX, EMAIL_PLACEHOLDER, REQUIRE_EDU_EMAIL } from '@/lib/constants';
 
-const SCHOOL_FIELDS = [
+const SCHOOL_FIELDS: { name: 'university' | 'department'; label: string; placeholder: string; autoComplete?: string }[] = [
   { name: 'university', label: 'University', placeholder: 'e.g. Middle East Technical University', autoComplete: 'organization' },
   { name: 'department', label: 'Department', placeholder: 'e.g. Computer Engineering' },
 ];
 
 export default function RegisterPage() {
   const navigate = useNavigate();
-  const dispatch = useDispatch();
+  const dispatch = useAppDispatch();
   const [register, { isLoading }] = useRegisterMutation();
 
-  const [form, setForm] = useState({ fullName: '', email: '', password: '', university: '', department: '' });
+  const [form, setForm] = useState<RegisterPayload>({ fullName: '', email: '', password: '', university: '', department: '' });
   const [error, setError] = useState('');
 
-  const handleChange = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
   const emailInvalid = REQUIRE_EDU_EMAIL && form.email.includes('@') && !EDU_EMAIL_REGEX.test(form.email.trim());
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     if (REQUIRE_EDU_EMAIL && !EDU_EMAIL_REGEX.test(form.email.trim())) {

@@ -13,7 +13,7 @@ import { pluralize } from '@/lib/format';
 
 // Bir kullanıcının tüm notları: solda sabit kullanıcı paneli, sağda arama + sıralama + sayfalı not listesi.
 export default function UserNotesPage() {
-  const { id } = useParams();
+  const { id = '' } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Number(searchParams.get('page')) || 1;
   const q = searchParams.get('q') ?? '';
@@ -30,7 +30,7 @@ export default function UserNotesPage() {
   const profile = useGetProfileQuery(id);
   const notes = useGetUserNotesQuery({ id, page, sort, q: q || undefined });
 
-  const updateParams = (changes, { keepPage = false } = {}) => {
+  const updateParams = (changes: Record<string, string>, { keepPage = false } = {}) => {
     const next = new URLSearchParams(searchParams);
     Object.entries(changes).forEach(([k, v]) => (v ? next.set(k, v) : next.delete(k)));
     if (!keepPage) next.delete('page');
@@ -38,7 +38,7 @@ export default function UserNotesPage() {
   };
 
   if (profile.isLoading) return <PageLayout><Spinner /></PageLayout>;
-  if (profile.error) {
+  if (profile.error || !profile.data) {
     return (
       <PageLayout narrow>
         <EmptyState title="User not found" action={<Link to="/" className="btn-primary">Back to home</Link>} />

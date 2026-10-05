@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type SyntheticEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { MessagesSquare, SendHorizontal, Trash2 } from 'lucide-react';
 import UserAvatar from '@/components/users/UserAvatar';
 import Spinner from '@/components/common/Spinner';
@@ -18,8 +18,8 @@ import { joinGroupRoom, leaveGroupRoom, useFallbackPolling } from '@/lib/socket'
 const POLL_INTERVAL_MS = 5000;
 
 // Grup sohbeti: sadece üyelere gösterilir. Son 100 mesaj listelenir.
-export default function GroupChat({ groupId, isOwner }) {
-  const me = useSelector((state) => state.auth.user);
+export default function GroupChat({ groupId, isOwner }: { groupId: string; isOwner: boolean }) {
+  const me = useAppSelector((state) => state.auth.user);
   const { data, isLoading, error } = useGetGroupMessagesQuery(groupId, {
     pollingInterval: useFallbackPolling(POLL_INTERVAL_MS),
     skipPollingIfUnfocused: true,
@@ -28,7 +28,7 @@ export default function GroupChat({ groupId, isOwner }) {
   const [deleteMessage] = useDeleteGroupMessageMutation();
   const [text, setText] = useState('');
   const [sendError, setSendError] = useState('');
-  const listRef = useRef(null);
+  const listRef = useRef<HTMLDivElement>(null);
 
   // Sohbet açıkken grubun socket odasına katılınır; yeni mesaj olayı gelince liste yenilenir (bkz. RealtimeBridge).
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function GroupChat({ groupId, isOwner }) {
     if (el) el.scrollTop = el.scrollHeight;
   }, [lastId]);
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
     const trimmed = text.trim();
     if (!trimmed) return;
@@ -59,11 +59,11 @@ export default function GroupChat({ groupId, isOwner }) {
   };
 
   // Enter gönderir, Shift+Enter yeni satır ekler.
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e);
   };
 
-  const handleDelete = async (messageId) => {
+  const handleDelete = async (messageId: string) => {
     if (!window.confirm('Delete this message?')) return;
     try {
       await deleteMessage({ id: groupId, messageId }).unwrap();

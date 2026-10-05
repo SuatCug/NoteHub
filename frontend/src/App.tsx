@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import ScrollToTop from '@/components/ScrollToTop';
 import RealtimeBridge from '@/components/RealtimeBridge';
 import { useGetMeQuery } from '@/services/authApi';
@@ -29,8 +29,8 @@ import ContactPage from '@/pages/ContactPage';
 import MessagesPage from '@/pages/MessagesPage';
 
 // Giriş gerektiren sayfalar: giriş sonrası geri dönülebilmesi için gelinen adres saklanır.
-function RequireAuth({ children }) {
-  const token = useSelector((state) => state.auth.token);
+function RequireAuth({ children }: { children: ReactNode }) {
+  const token = useAppSelector((state) => state.auth.token);
   const location = useLocation();
   return token ? children : <Navigate to="/login" replace state={{ from: location.pathname }} />;
 }
@@ -38,15 +38,15 @@ function RequireAuth({ children }) {
 // Zaten giriş yapmış kullanıcı login/register ekranlarını görmez. Sadece sayfa açıldığı andaki
 // token'a bakılır: form gönderilip token set edildiğinde yönlendirmeyi sayfanın kendisi yapar
 // (aksi halde Redux güncellemesi router geçişinden önce işlenip kullanıcıyı yanlış sayfaya atıyor).
-function GuestOnly({ children }) {
-  const token = useSelector((state) => state.auth.token);
+function GuestOnly({ children }: { children: ReactNode }) {
+  const token = useAppSelector((state) => state.auth.token);
   const [hadTokenOnMount] = useState(Boolean(token));
   return hadTokenOnMount ? <Navigate to="/" replace /> : children;
 }
 
 export default function App() {
-  const token = useSelector((state) => state.auth.token);
-  const user = useSelector((state) => state.auth.user);
+  const token = useAppSelector((state) => state.auth.token);
+  const user = useAppSelector((state) => state.auth.user);
   const location = useLocation();
   // Uygulama açılışında kullanıcı bilgisini tazeler (örn. başka sekmede e-posta doğrulandıysa).
   useGetMeQuery(undefined, { skip: !token });

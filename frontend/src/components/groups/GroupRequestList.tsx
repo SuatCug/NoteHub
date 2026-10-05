@@ -7,7 +7,7 @@ import { useGetJoinRequestsQuery, useRespondJoinRequestMutation } from '@/servic
 import { getErrorMessage } from '@/lib/getErrorMessage';
 
 // Özel grubun bekleyen katılma istekleri (sadece kurucuya gösterilir).
-export default function GroupRequestList({ groupId }) {
+export default function GroupRequestList({ groupId }: { groupId: string }) {
   const { data, isLoading } = useGetJoinRequestsQuery(groupId);
   const [respond, { isLoading: responding }] = useRespondJoinRequestMutation();
   const users = data?.data?.users;
@@ -17,7 +17,7 @@ export default function GroupRequestList({ groupId }) {
     return <EmptyState icon={UserPlus} title="No pending requests" text="New join requests will show up here." />;
   }
 
-  const handle = async (userId, approve) => {
+  const handle = async (userId: string, approve: boolean) => {
     try {
       await respond({ id: groupId, userId, approve }).unwrap();
     } catch (err) {

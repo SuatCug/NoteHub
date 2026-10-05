@@ -1,9 +1,11 @@
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
-const { User, Note, Conversation, DirectMessage } = require('../models');
-const { assertNoteVisible } = require('../services/note.service');
-const { isBlockedBetween } = require('../services/block.service');
-const { emitToUsers } = require('../services/realtime.service');
+import asyncHandler, { type AuthedRequest } from '../utils/asyncHandler.ts';
+import ApiError from '../utils/apiError.ts';
+import { User, Note, Conversation, DirectMessage } from '../models/index.ts';
+import { assertNoteVisible } from '../services/note.service.ts';
+import { isBlockedBetween } from '../services/block.service.ts';
+import { emitToUsers } from '../services/realtime.service.ts';
+import type { Types } from 'mongoose';
+import type { ConversationDocument } from '../models/conversation.model.ts';
 
 const USER_CARD_FIELDS = 'fullName avatarUrl university department';
 const NOTE_CARD_FIELDS = 'title courseCode courseName fileType';
@@ -11,24 +13,42 @@ const MESSAGE_LIMIT = 100;
 const CONVERSATION_LIMIT = 100;
 
 // Sadece katılımcıların görebildiği konuşma; değilse konuşma yokmuş gibi 404 döner.
-const findConversationOrFail = async (id, userId) => {
+const findConversationOrFail = async (id: string, userId: string) => {
   const conversation = await Conversation.findById(id);
   if (!conversation || !conversation.hasParticipant(userId)) throw new ApiError(404, 'Conversation not found.');
   return conversation;
 };
 
+// Konuşmanın diğer katılımcısı (her konuşmada iki katılımcı vardır).
+const otherParticipantOf = (conversation: ConversationDocument, userId: string) => {
+  const other = conversation.otherParticipant(userId);
+  if (!other) throw new ApiError(404, 'Conversation not found.');
+  return other;
+};
+
+// Map alanları dokümanda Map, .lean() sonucunda düz obje olarak gelir.
+type UserIdMap<T> = Map<string, T> | Record<string, T> | null | undefined;
+
 // Kullanıcı konuşmayı kendi tarafında sildiyse, o andan önceki mesajlar ona gösterilmez.
-const clearedAtFor = (conversation, userId) => {
+const clearedAtFor = (conversation: { clearedAt?: UserIdMap<Date> }, userId: string) => {
   const map = conversation.clearedAt;
   return (map instanceof Map ? map.get(userId) : map?.[userId]) || null;
 };
 
-const unreadFor = (conversation, userId) => {
+const unreadFor = (conversation: { unreadCounts?: UserIdMap<number> }, userId: string) => {
   const map = conversation.unreadCounts;
   return (map instanceof Map ? map.get(userId) : map?.[userId]) || 0;
 };
 
-const toMessageJSON = (m) => ({
+interface MessageLike {
+  _id: Types.ObjectId;
+  sender: Types.ObjectId;
+  text: string;
+  note?: unknown;
+  createdAt: Date;
+}
+
+const toMessageJSON = (m: MessageLike) => ({
   _id: m._id,
   sender: m.sender,
   text: m.text,
@@ -37,7 +57,7 @@ const toMessageJSON = (m) => ({
 });
 
 // Mesajlar sayfasındaki konuşma listesi (en son mesajı olan en üstte).
-const getConversations = asyncHandler(async (req, res) => {
+const getConversations = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = req.user.id;
   const conversations = await Conversation.find({ participants: me, lastMessageAt: { $ne: null } })
     .sort({ lastMessageAt: -1 })
@@ -48,7 +68,7 @@ const getConversations = asyncHandler(async (req, res) => {
   const items = conversations
     .filter((c) => {
       const cleared = clearedAtFor(c, me);
-      return !cleared || c.lastMessageAt > cleared;
+      return !cleared || (c.lastMessageAt != null && c.lastMessageAt > cleared);
     })
     .map((c) => ({
       _id: c._id,
@@ -67,7 +87,7 @@ const getConversations = asyncHandler(async (req, res) => {
 });
 
 // Navbar'daki rozet için toplam okunmamış mesaj sayısı.
-const getUnreadCount = asyncHandler(async (req, res) => {
+const getUnreadCount = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = req.user.id;
   const conversations = await Conversation.find({ participants: me, [`unreadCounts.${me}`]: { $gt: 0 } })
     .select('unreadCounts')
@@ -79,7 +99,7 @@ const getUnreadCount = asyncHandler(async (req, res) => {
 
 // Bir kullanıcıyla konuşmayı açar (yoksa oluşturur) ve id'sini döndürür.
 // Mesaj atılana kadar konuşma listede görünmez.
-const startConversation = asyncHandler(async (req, res) => {
+const startConversation = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = req.user.id;
   const { userId } = req.body;
   if (userId === me) throw new ApiError(400, 'You cannot message yourself.');
@@ -98,7 +118,7 @@ const startConversation = asyncHandler(async (req, res) => {
 });
 
 // Konuşma detayı + son mesajlar. Açılan konuşma okunmuş sayılır.
-const getConversation = asyncHandler(async (req, res) => {
+const getConversation = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = req.user.id;
   const conversation = await findConversationOrFail(req.params.id, me);
   const otherId = conversation.otherParticipant(me);
@@ -138,10 +158,10 @@ const getConversation = asyncHandler(async (req, res) => {
   });
 });
 
-const sendMessage = asyncHandler(async (req, res) => {
+const sendMessage = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = req.user.id;
   const conversation = await findConversationOrFail(req.params.id, me);
-  const otherId = conversation.otherParticipant(me);
+  const otherId = otherParticipantOf(conversation, me);
 
   if (!(await User.exists({ _id: otherId }))) throw new ApiError(404, 'This user no longer exists.');
   if (await isBlockedBetween(me, otherId)) throw new ApiError(403, 'You cannot message this user.');
@@ -153,7 +173,7 @@ const sendMessage = asyncHandler(async (req, res) => {
     if (!note) throw new ApiError(404, 'Note not found.');
     await assertNoteVisible(note, me);
     try {
-      await assertNoteVisible(note, otherId);
+      await assertNoteVisible(note, otherId.toString());
     } catch {
       throw new ApiError(403, "The recipient can't see this note (it's shared with a group or only with the author's followers).");
     }
@@ -185,7 +205,7 @@ const sendMessage = asyncHandler(async (req, res) => {
 });
 
 // Mesajı geri alma: sadece gönderen silebilir, iki taraftan da kalkar.
-const deleteMessage = asyncHandler(async (req, res) => {
+const deleteMessage = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = req.user.id;
   const conversation = await findConversationOrFail(req.params.id, me);
 
@@ -195,9 +215,9 @@ const deleteMessage = asyncHandler(async (req, res) => {
   await message.deleteOne();
 
   // Liste özetini kalan son mesaja göre güncelle; alıcı henüz okumadıysa okunmamış sayısını düşür.
-  const otherId = conversation.otherParticipant(me).toString();
+  const otherId = otherParticipantOf(conversation, me).toString();
   const latest = await DirectMessage.findOne({ conversation: conversation._id }).sort({ createdAt: -1 }).lean();
-  const update = latest
+  const update: { $set?: Record<string, unknown>; $unset?: Record<string, 1> } = latest
     ? {
         $set: {
           lastMessage: {
@@ -219,7 +239,7 @@ const deleteMessage = asyncHandler(async (req, res) => {
 });
 
 // Konuşmayı sadece kendi tarafında siler (karşı taraf görmeye devam eder).
-const deleteConversation = asyncHandler(async (req, res) => {
+const deleteConversation = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = req.user.id;
   const conversation = await findConversationOrFail(req.params.id, me);
 
@@ -231,7 +251,7 @@ const deleteConversation = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Conversation deleted.' });
 });
 
-module.exports = {
+export {
   getConversations,
   getUnreadCount,
   startConversation,

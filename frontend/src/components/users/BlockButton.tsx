@@ -3,7 +3,14 @@ import { useToggleBlockMutation } from '@/services/usersApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 
 // Engelle / engeli kaldır. Engellenince karşılıklı takip kalkar ve iki taraf birbirine mesaj atamaz.
-export default function BlockButton({ userId, isBlocked, name, className = '' }) {
+interface BlockButtonProps {
+  userId: string;
+  isBlocked: boolean;
+  name: string;
+  className?: string;
+}
+
+export default function BlockButton({ userId, isBlocked, name, className = '' }: BlockButtonProps) {
   const [toggleBlock, { isLoading }] = useToggleBlockMutation();
 
   const handleClick = async () => {

@@ -1,4 +1,4 @@
-const nodemailer = require('nodemailer');
+import nodemailer from 'nodemailer';
 
 // E-posta gönderimi üç yoldan biriyle yapılır (öncelik sırasıyla):
 // 1) BREVO_API_KEY varsa Brevo HTTP API'si — Render'ın ücretsiz planı gibi SMTP portlarının kapalı olduğu
@@ -10,8 +10,8 @@ const BREVO_API_URL = 'https://api.brevo.com/v3/smtp/email';
 const transporter = process.env.SMTP_HOST
   ? nodemailer.createTransport({
       host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT, 10) || 587,
-      secure: parseInt(process.env.SMTP_PORT, 10) === 465,
+      port: parseInt(process.env.SMTP_PORT ?? '', 10) || 587,
+      secure: parseInt(process.env.SMTP_PORT ?? '', 10) === 465,
       auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
     })
   : null;
@@ -26,10 +26,18 @@ const parseSender = () => {
   return match ? { name: match[1].trim() || 'SearchNote', email: match[2].trim() } : { name: 'SearchNote', email: raw };
 };
 
-const sendWithBrevo = async ({ to, toName, subject, text, html }) => {
+interface MailMessage {
+  to: string;
+  toName: string;
+  subject: string;
+  text: string;
+  html: string;
+}
+
+const sendWithBrevo = async ({ to, toName, subject, text, html }: MailMessage) => {
   const res = await fetch(BREVO_API_URL, {
     method: 'POST',
-    headers: { 'api-key': process.env.BREVO_API_KEY, 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: { 'api-key': process.env.BREVO_API_KEY ?? '', 'Content-Type': 'application/json', Accept: 'application/json' },
     body: JSON.stringify({
       sender: parseSender(),
       to: [{ email: to, name: toName }],
@@ -44,7 +52,7 @@ const sendWithBrevo = async ({ to, toName, subject, text, html }) => {
   }
 };
 
-const sendMail = async (message) => {
+const sendMail = async (message: MailMessage) => {
   if (process.env.BREVO_API_KEY) return sendWithBrevo(message);
   if (transporter) {
     const { name, email } = parseSender();
@@ -62,7 +70,7 @@ const sendMail = async (message) => {
 // Mail servisi yapılandırılmış mı (değilse bağlantı konsola yazılır).
 const isMailConfigured = () => Boolean(process.env.BREVO_API_KEY || transporter);
 
-const sendVerificationEmail = async (user, token) => {
+const sendVerificationEmail = async (user: { email: string; fullName: string }, token: string) => {
   const link = `${getClientUrl()}/verify-email?token=${token}`;
 
   if (!isMailConfigured()) {
@@ -88,4 +96,4 @@ const sendVerificationEmail = async (user, token) => {
   });
 };
 
-module.exports = { sendVerificationEmail, isMailConfigured };
+export { sendVerificationEmail, isMailConfigured };

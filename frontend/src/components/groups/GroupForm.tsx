@@ -1,6 +1,15 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Globe, Lock } from 'lucide-react';
 import Alert from '@/components/common/Alert';
+import type { GroupInput } from '@/types/api';
+
+interface GroupFormProps {
+  initialValues?: Partial<GroupInput>;
+  onSubmit: (values: GroupInput) => void;
+  isLoading: boolean;
+  submitLabel: string;
+  error?: string;
+}
 
 const PRIVACY_OPTIONS = [
   { value: false, icon: Globe, title: 'Public', text: 'Anyone can join. Notes and chat are visible to members only.' },
@@ -8,12 +17,12 @@ const PRIVACY_OPTIONS = [
 ];
 
 // Grup kurma ve düzenleme formu.
-export default function GroupForm({ initialValues, onSubmit, isLoading, submitLabel, error }) {
-  const [values, setValues] = useState(() => ({ name: '', description: '', isPrivate: false, ...initialValues }));
+export default function GroupForm({ initialValues, onSubmit, isLoading, submitLabel, error }: GroupFormProps) {
+  const [values, setValues] = useState<GroupInput>(() => ({ name: '', description: '', isPrivate: false, ...initialValues }));
 
-  const handleChange = (e) => setValues((v) => ({ ...v, [e.target.name]: e.target.value }));
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setValues((v) => ({ ...v, [e.target.name]: e.target.value }));
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     onSubmit({ name: values.name.trim(), description: values.description.trim(), isPrivate: values.isPrivate });
   };

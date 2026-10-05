@@ -1,9 +1,9 @@
-const { body, param, query } = require('express-validator');
-const { SORT_OPTIONS } = require('../services/note.service');
+import { body, param, query, type ValidationChain } from 'express-validator';
+import { SORT_OPTIONS } from '../services/note.service.ts';
 
 // Not oluşturma ve güncellemede ortak alanlar. Güncellemede tüm alanlar opsiyoneldir.
-const noteFieldRules = (isUpdate) => {
-  const required = (chain) => (isUpdate ? chain.optional() : chain);
+const noteFieldRules = (isUpdate: boolean) => {
+  const required = (chain: ValidationChain) => (isUpdate ? chain.optional() : chain);
   return [
     required(body('title')).trim().notEmpty().withMessage('Title is required.').isLength({ max: 150 }),
     required(body('courseName')).trim().notEmpty().withMessage('Course name is required.').isLength({ max: 150 }),
@@ -38,4 +38,4 @@ const commentRules = [
 
 const commentParamRules = [param('commentId').isMongoId().withMessage('Invalid comment id.')];
 
-module.exports = { createNoteRules, updateNoteRules, listNotesRules, commentRules, commentParamRules };
+export { createNoteRules, updateNoteRules, listNotesRules, commentRules, commentParamRules };

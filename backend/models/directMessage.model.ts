@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Birebir konuşma mesajı. İsteğe bağlı olarak bir not eklenebilir ("Ask the author" ile başlatılan konuşmalar).
 const directMessageSchema = new mongoose.Schema(
@@ -13,4 +13,5 @@ const directMessageSchema = new mongoose.Schema(
 
 directMessageSchema.index({ conversation: 1, createdAt: -1 });
 
-module.exports = mongoose.model('DirectMessage', directMessageSchema);
+export const DirectMessage = mongoose.model('DirectMessage', directMessageSchema);
+export default DirectMessage;

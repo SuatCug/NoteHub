@@ -1,8 +1,8 @@
-const { body, param } = require('express-validator');
+import { body, param, type ValidationChain } from 'express-validator';
 
 // Grup oluşturma ve güncellemede ortak alanlar. Güncellemede tüm alanlar opsiyoneldir.
-const groupFieldRules = (isUpdate) => {
-  const required = (chain) => (isUpdate ? chain.optional() : chain);
+const groupFieldRules = (isUpdate: boolean) => {
+  const required = (chain: ValidationChain) => (isUpdate ? chain.optional() : chain);
   return [
     required(body('name'))
       .trim()
@@ -31,4 +31,4 @@ const messageRules = [
 
 const messageParamRules = [param('messageId').isMongoId().withMessage('Invalid message id.')];
 
-module.exports = { createGroupRules, updateGroupRules, memberParamRules, messageRules, messageParamRules };
+export { createGroupRules, updateGroupRules, memberParamRules, messageRules, messageParamRules };

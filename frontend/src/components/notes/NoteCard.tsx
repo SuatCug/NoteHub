@@ -4,8 +4,9 @@ import FileTypeBadge from './FileTypeBadge';
 import VisibilityBadge from './VisibilityBadge';
 import UserAvatar from '@/components/users/UserAvatar';
 import { formatCount, timeAgo } from '@/lib/format';
+import type { NoteCard as NoteCardData } from '@/types/api';
 
-export default function NoteCard({ note, index = 0 }) {
+export default function NoteCard({ note, index = 0 }: { note: NoteCardData; index?: number }) {
   return (
     <article
       className="card card-enter relative flex flex-col min-w-0 p-5 hover:shadow-md hover:border-navy-100 transition-all"

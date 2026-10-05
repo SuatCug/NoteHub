@@ -1,4 +1,4 @@
-const crypto = require('crypto');
+import crypto from 'node:crypto';
 
 // E-posta doğrulama token'ı: kullanıcıya düz hali gönderilir, veritabanında sadece hash'i tutulur.
 const createVerificationToken = () => {
@@ -6,6 +6,6 @@ const createVerificationToken = () => {
   return { token, tokenHash: hashToken(token) };
 };
 
-const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex');
+const hashToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
 
-module.exports = { createVerificationToken, hashToken };
+export { createVerificationToken, hashToken };

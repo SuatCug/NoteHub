@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { MailWarning } from 'lucide-react';
 import { useResendVerificationMutation } from '@/services/authApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 
 // Giriş yapmış ama e-postasını doğrulamamış kullanıcıya gösterilen uyarı şeridi.
 export default function VerifyBanner() {
-  const user = useSelector((state) => state.auth.user);
+  const user = useAppSelector((state) => state.auth.user);
   const [resend, { isLoading }] = useResendVerificationMutation();
   const [message, setMessage] = useState('');
 
@@ -15,7 +15,7 @@ export default function VerifyBanner() {
   const handleResend = async () => {
     try {
       const res = await resend().unwrap();
-      setMessage(res.message);
+      setMessage(res.message ?? '');
     } catch (err) {
       setMessage(getErrorMessage(err));
     }

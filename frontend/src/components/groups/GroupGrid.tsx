@@ -1,6 +1,16 @@
+import type { ReactNode } from 'react';
 import { Users } from 'lucide-react';
 import GroupCard from './GroupCard';
 import EmptyState from '@/components/common/EmptyState';
+import type { GroupCard as GroupCardData } from '@/types/api';
+
+interface GroupGridProps {
+  groups?: GroupCardData[];
+  isLoading?: boolean;
+  emptyTitle?: string;
+  emptyText?: ReactNode;
+  emptyAction?: ReactNode;
+}
 
 function GroupCardSkeleton() {
   return (
@@ -17,7 +27,7 @@ function GroupCardSkeleton() {
 }
 
 // Grup kartları ızgarası: yüklenirken iskelet, boşken bilgilendirme gösterir.
-export default function GroupGrid({ groups, isLoading, emptyTitle, emptyText, emptyAction }) {
+export default function GroupGrid({ groups, isLoading, emptyTitle, emptyText, emptyAction }: GroupGridProps) {
   if (isLoading) {
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

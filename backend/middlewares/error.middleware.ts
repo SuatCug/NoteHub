@@ -1,12 +1,14 @@
-const multer = require('multer');
-const ApiError = require('../utils/apiError');
+import type { ErrorRequestHandler, RequestHandler } from 'express';
+import multer from 'multer';
+import ApiError from '../utils/apiError.ts';
 
-const notFound = (req, res, next) => {
+const notFound: RequestHandler = (req, _res, next) => {
   next(new ApiError(404, `Endpoint not found: ${req.originalUrl}`));
 };
 
 // Merkezi hata yönetimi middleware'i.
-const errorHandler = (err, req, res, next) => {
+// err: ApiError, Mongoose / MongoDB hataları veya Multer hatası olabilir.
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
   let { statusCode, message } = err;
 
   if (!statusCode) statusCode = 500;
@@ -16,7 +18,7 @@ const errorHandler = (err, req, res, next) => {
   if (err.name === 'ValidationError') {
     statusCode = 422;
     message = Object.values(err.errors)
-      .map((e) => e.message)
+      .map((e) => (e as Error).message)
       .join(' ');
   }
   if (err.code === 11000) {
@@ -45,4 +47,4 @@ const errorHandler = (err, req, res, next) => {
   });
 };
 
-module.exports = { notFound, errorHandler };
+export { notFound, errorHandler };

@@ -1,19 +1,20 @@
-const router = require('express').Router();
-const noteController = require('../controllers/note.controller');
-const commentController = require('../controllers/comment.controller');
-const authenticate = require('../middlewares/auth.middleware');
-const { optionalAuth } = require('../middlewares/auth.middleware');
-const requireVerified = require('../middlewares/verified.middleware');
-const validate = require('../middlewares/validate.middleware');
-const { uploadNoteFile } = require('../middlewares/upload.middleware');
-const { idParamRules } = require('../validations/common.validation');
-const {
+import { Router } from 'express';
+import * as noteController from '../controllers/note.controller.ts';
+import * as commentController from '../controllers/comment.controller.ts';
+import authenticate, { optionalAuth } from '../middlewares/auth.middleware.ts';
+import requireVerified from '../middlewares/verified.middleware.ts';
+import validate from '../middlewares/validate.middleware.ts';
+import { uploadNoteFile } from '../middlewares/upload.middleware.ts';
+import { idParamRules } from '../validations/common.validation.ts';
+import {
   createNoteRules,
   updateNoteRules,
   listNotesRules,
   commentRules,
   commentParamRules,
-} = require('../validations/note.validation');
+} from '../validations/note.validation.ts';
+
+const router = Router();
 
 const verifiedOnly = [authenticate, requireVerified];
 
@@ -54,4 +55,4 @@ router.delete(
   commentController.deleteComment
 );
 
-module.exports = router;
+export default router;

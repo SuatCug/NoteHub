@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Grup sohbeti mesajları. Sadece grup üyeleri okuyup yazabilir.
 const groupMessageSchema = new mongoose.Schema(
@@ -12,4 +12,5 @@ const groupMessageSchema = new mongoose.Schema(
 
 groupMessageSchema.index({ group: 1, createdAt: -1 });
 
-module.exports = mongoose.model('GroupMessage', groupMessageSchema);
+export const GroupMessage = mongoose.model('GroupMessage', groupMessageSchema);
+export default GroupMessage;

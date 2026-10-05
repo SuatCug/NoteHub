@@ -1,4 +1,4 @@
-const { body, param } = require('express-validator');
+import { body, param } from 'express-validator';
 
 const startConversationRules = [body('userId').isMongoId().withMessage('Invalid user id.')];
 
@@ -14,4 +14,4 @@ const sendMessageRules = [
 
 const messageParamRules = [param('messageId').isMongoId().withMessage('Invalid message id.')];
 
-module.exports = { startConversationRules, sendMessageRules, messageParamRules };
+export { startConversationRules, sendMessageRules, messageParamRules };

@@ -6,7 +6,7 @@ import { formatDate } from '@/lib/format';
 // Footer'daki yasal sayfalar. Metinler taslaktır; yayına almadan önce bir hukukçuya kontrol ettirilmelidir.
 const LAST_UPDATED = '2026-09-30';
 
-const LEGAL_DOCUMENTS = {
+const LEGAL_DOCUMENTS: Record<string, { title: string; sections: [heading: string, body: string][] }> = {
   terms: {
     title: 'Terms of Use',
     sections: [
@@ -56,7 +56,7 @@ const LEGAL_DOCUMENTS = {
 
 export default function LegalPage() {
   const { slug } = useParams();
-  const doc = LEGAL_DOCUMENTS[slug];
+  const doc = slug ? LEGAL_DOCUMENTS[slug] : undefined;
   if (!doc) return <NotFoundPage />;
 
   return (

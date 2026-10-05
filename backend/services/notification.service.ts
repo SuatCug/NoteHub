@@ -1,13 +1,24 @@
-const { Notification } = require('../models');
-const { emitToUsers } = require('./realtime.service');
+import { Notification } from '../models/index.ts';
+import type { NotificationType } from '../models/notification.model.ts';
+import type { IdLike } from '../types/common.ts';
+import { emitToUsers } from './realtime.service.ts';
 
 // Aynı kişinin aynı hedefe tekrar yaptığı bu olaylar yeni kayıt açmaz; mevcut bildirim öne alınıp okunmamış yapılır.
-const COLLAPSIBLE_TYPES = ['like', 'follow', 'group_join', 'group_request', 'group_approved'];
+const COLLAPSIBLE_TYPES: NotificationType[] = ['like', 'follow', 'group_join', 'group_request', 'group_approved'];
 
-const toId = (v) => (v ? String(v) : undefined);
+const toId = (v: IdLike | null | undefined) => (v ? String(v) : undefined);
+
+interface NotificationEvent {
+  recipient: IdLike | null | undefined;
+  actor: IdLike;
+  type: NotificationType;
+  note?: IdLike;
+  group?: IdLike;
+  text?: string;
+}
 
 // Bildirim oluşturur. Kişi kendi eylemi için bildirim almaz. Bildirim hatası asıl işlemi bozmasın diye hata yutulur.
-const notify = async ({ recipient, actor, type, note, group, text }) => {
+const notify = async ({ recipient, actor, type, note, group, text }: NotificationEvent) => {
   if (!recipient || toId(recipient) === toId(actor)) return;
   try {
     const key = { recipient, actor, type, ...(note && { note }), ...(group && { group }) };
@@ -23,12 +34,12 @@ const notify = async ({ recipient, actor, type, note, group, text }) => {
     // Alıcının açık sekmelerine anında haber verilir (zil rozeti ve liste yenilenir).
     emitToUsers(recipient, 'notifications:changed');
   } catch (error) {
-    console.error('Notification error:', error.message);
+    console.error('Notification error:', (error as Error).message);
   }
 };
 
 // Geri alınan eylemlerin (beğeniyi / takibi kaldırma, yorumu silme) bildirimi silinir.
-const removeNotification = async ({ recipient, actor, type, note, group, text }) => {
+const removeNotification = async ({ recipient, actor, type, note, group, text }: NotificationEvent) => {
   try {
     const { deletedCount } = await Notification.deleteOne({
       recipient,
@@ -40,8 +51,8 @@ const removeNotification = async ({ recipient, actor, type, note, group, text })
     });
     if (deletedCount) emitToUsers(recipient, 'notifications:changed');
   } catch (error) {
-    console.error('Notification error:', error.message);
+    console.error('Notification error:', (error as Error).message);
   }
 };
 
-module.exports = { notify, removeNotification };
+export { notify, removeNotification };

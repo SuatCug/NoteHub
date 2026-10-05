@@ -1,4 +1,4 @@
-const { body } = require('express-validator');
+import { body } from 'express-validator';
 
 const updateProfileRules = [
   body('fullName').optional().trim().notEmpty().withMessage('Full name cannot be empty.').isLength({ max: 80 }),
@@ -12,4 +12,4 @@ const changePasswordRules = [
   body('newPassword').isLength({ min: 8 }).withMessage('New password must be at least 8 characters.'),
 ];
 
-module.exports = { updateProfileRules, changePasswordRules };
+export { updateProfileRules, changePasswordRules };

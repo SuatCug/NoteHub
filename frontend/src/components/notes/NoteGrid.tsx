@@ -1,4 +1,6 @@
+import type { ReactNode } from 'react';
 import NoteCard from './NoteCard';
+import type { NoteCard as NoteCardData } from '@/types/api';
 import EmptyState from '@/components/common/EmptyState';
 
 function NoteCardSkeleton() {
@@ -23,7 +25,16 @@ const DEFAULT_GRID = 'grid gap-4 sm:grid-cols-2 lg:grid-cols-3';
 
 // Not kartları ızgarası: yüklenirken iskelet, boşken bilgilendirme gösterir.
 // gridClassName: dar alanlarda (örn. yan panelli sayfalar) sütun sayısını değiştirmek için.
-export default function NoteGrid({ notes, isLoading, emptyTitle, emptyText, emptyAction, gridClassName = DEFAULT_GRID }) {
+interface NoteGridProps {
+  notes?: NoteCardData[];
+  isLoading?: boolean;
+  emptyTitle?: string;
+  emptyText?: ReactNode;
+  emptyAction?: ReactNode;
+  gridClassName?: string;
+}
+
+export default function NoteGrid({ notes, isLoading, emptyTitle, emptyText, emptyAction, gridClassName = DEFAULT_GRID }: NoteGridProps) {
   if (isLoading) {
     return (
       <div className={gridClassName}>

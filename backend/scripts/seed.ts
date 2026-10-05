@@ -3,12 +3,12 @@
 //   npm run seed         -> önceki demo verisini silip yeniden oluşturur
 //   npm run seed:clear   -> sadece demo verisini siler
 // Demo kullanıcılar DEMO_EMAIL_DOMAIN ile ayırt edilir; gerçek kullanıcılara ve notlara dokunulmaz.
-require('dotenv').config({ quiet: true });
-const bcrypt = require('bcryptjs');
-const mongoose = require('mongoose');
-const connectDB = require('../config/db');
-const { User, Note, Group, GroupMessage } = require('../models');
-const { saveNoteFile, removeFile } = require('../services/storage.service');
+import '../config/env.ts';
+import bcrypt from 'bcryptjs';
+import mongoose from 'mongoose';
+import connectDB from '../config/db.ts';
+import { User, Note, Group, GroupMessage } from '../models/index.ts';
+import { saveNoteFile, removeFile } from '../services/storage.service.ts';
 
 const DEMO_EMAIL_DOMAIN = 'demo.notehub.dev';
 const DEMO_PASSWORD = 'demo12345';
@@ -37,7 +37,17 @@ const SHOWCASE_USER = 0;
 const SHOWCASE_FOLLOWING = [1, 2, 5, 6, 7, 8, 9, 11];
 
 // [kullanıcı index, başlık, ders adı, ders kodu, hoca, dönem, açıklama, sayfa içeriği]
-const NOTES = [
+type NoteSeed = [
+  authorIdx: number,
+  title: string,
+  courseName: string,
+  courseCode: string,
+  instructorName: string,
+  semester: string,
+  description: string,
+  lines: string[],
+];
+const NOTES: NoteSeed[] = [
   [0, 'Veri Yapıları Final Özeti', 'Data Structures', 'CENG213', 'Prof. Dr. Ahmet Arslan', '2024-2025 Fall', 'Linked list, stack, queue, tree, heap ve hash table konularının final öncesi özeti.', ['Linked Lists: singly, doubly, circular', 'Stacks & Queues: array and list implementations', 'Binary Search Trees: insert, delete, traversal', 'AVL Trees: rotations and balance factor', 'Heaps: heapify, priority queue', 'Hashing: chaining vs open addressing']],
   [0, 'C Programlama Vize Notları', 'Computer Programming I', 'CENG101', 'Dr. Selin Aksoy', '2024-2025 Fall', 'Pointer, dizi ve fonksiyon konuları. Bol örnekli.', ['Variables, types and operators', 'Control flow: if, switch, loops', 'Functions and scope', 'Arrays and strings', 'Pointers and pointer arithmetic', 'Dynamic memory: malloc / free']],
   [0, 'Algoritma Analizi Çıkmış Sorular', 'Algorithms', 'CENG315', 'Prof. Dr. Ahmet Arslan', '2023-2024 Spring', 'Son 3 yılın çıkmış final soruları ve çözümleri.', ['Asymptotic notation: O, Omega, Theta', 'Master theorem examples', 'Divide and conquer: merge sort, quicksort', 'Dynamic programming: LCS, knapsack', 'Greedy algorithms: Huffman, activity selection', 'Graph algorithms: BFS, DFS, Dijkstra']],
@@ -67,7 +77,19 @@ const NOTES = [
 // [kurucu index, ad, açıklama, özel mi, üye index listesi, istek gönderenler, grup notları, sohbet]
 // Grup notu: [yazar index, başlık, ders adı, ders kodu, açıklama, sayfa içeriği]
 // Sohbet mesajı: [yazan index, metin]
-const GROUPS = [
+type GroupNoteSeed = [authorIdx: number, title: string, courseName: string, courseCode: string, description: string, lines: string[]];
+type ChatSeed = [userIdx: number, text: string];
+type GroupSeed = [
+  ownerIdx: number,
+  name: string,
+  description: string,
+  isPrivate: boolean,
+  memberIdx: number[],
+  requestIdx: number[],
+  notes: GroupNoteSeed[],
+  chat: ChatSeed[],
+];
+const GROUPS: GroupSeed[] = [
   [
     0,
     'CENG213 Veri Yapıları Çalışma Grubu',
@@ -153,12 +175,12 @@ const COMMENTS = [
 ];
 
 // PDF'in standart fontu Türkçe karakterleri içermediği için sayfa metninde ASCII karşılıkları kullanılır.
-const toAscii = (s) =>
-  s.replace(/[çÇğĞıİöÖşŞüÜ]/g, (c) => ({ ç: 'c', Ç: 'C', ğ: 'g', Ğ: 'G', ı: 'i', İ: 'I', ö: 'o', Ö: 'O', ş: 's', Ş: 'S', ü: 'u', Ü: 'U' })[c]);
-const escapePdf = (s) => toAscii(s).replace(/[\\()]/g, (c) => `\\${c}`);
+const ASCII_MAP: Record<string, string> = { ç: 'c', Ç: 'C', ğ: 'g', Ğ: 'G', ı: 'i', İ: 'I', ö: 'o', Ö: 'O', ş: 's', Ş: 'S', ü: 'u', Ü: 'U' };
+const toAscii = (s: string) => s.replace(/[çÇğĞıİöÖşŞüÜ]/g, (c) => ASCII_MAP[c]);
+const escapePdf = (s: string) => toAscii(s).replace(/[\\()]/g, (c) => `\\${c}`);
 
 // Tek sayfalık, geçerli (xref tablolu) basit bir PDF üretir.
-const buildPdf = ({ title, subtitle, lines }) => {
+const buildPdf = ({ title, subtitle, lines }: { title: string; subtitle: string; lines: string[] }) => {
   const ops = ['BT', '/F1 22 Tf', '60 770 Td', `(${escapePdf(title)}) Tj`, '/F1 12 Tf', '0 -26 Td', `(${escapePdf(subtitle)}) Tj`, '/F1 13 Tf'];
   lines.forEach((line, i) => ops.push(`0 ${i === 0 ? -44 : -26} Td`, `(${i + 1}. ${escapePdf(line)}) Tj`));
   ops.push('/F1 10 Tf', `0 -${60 + 0} Td`, '(Shared on SearchNote - sample note) Tj', 'ET');
@@ -185,9 +207,9 @@ const buildPdf = ({ title, subtitle, lines }) => {
   return Buffer.from(pdf, 'latin1');
 };
 
-const pick = (arr, n) => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
-const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-const slug = (s) => toAscii(s).replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
+const pick = <T>(arr: T[], n: number) => [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+const slug = (s: string) => toAscii(s).replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '');
 
 const clearDemoData = async () => {
   const demoUsers = await User.find({ email: new RegExp(`@${DEMO_EMAIL_DOMAIN.replace(/\./g, '\\.')}$`) }).select('_id');

@@ -1,12 +1,13 @@
-const ApiError = require('../utils/apiError');
+import type { RequestHandler } from 'express';
+import ApiError from '../utils/apiError.ts';
 
 // Basit, bellek içi istek sınırlayıcı (kullanıcı başına kayan pencere). authenticate'ten sonra kullanılmalıdır.
 // Tek sunucu süreci için yeterli; birden fazla süreç/serverless ortamda Redis tabanlı bir sınırlayıcıya geçilmeli.
-const rateLimit = ({ windowMs, max, message }) => {
-  const hits = new Map();
+const rateLimit = ({ windowMs, max, message }: { windowMs: number; max: number; message: string }): RequestHandler => {
+  const hits = new Map<string, number[]>();
 
-  return (req, res, next) => {
-    const key = req.user?.id || req.ip;
+  return (req, _res, next) => {
+    const key = req.user?.id || req.ip || '';
     const now = Date.now();
     const recent = (hits.get(key) || []).filter((t) => now - t < windowMs);
 
@@ -25,4 +26,4 @@ const rateLimit = ({ windowMs, max, message }) => {
   };
 };
 
-module.exports = rateLimit;
+export default rateLimit;

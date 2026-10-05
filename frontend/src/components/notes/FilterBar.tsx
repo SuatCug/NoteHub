@@ -1,7 +1,16 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { SlidersHorizontal, X } from 'lucide-react';
 import { useGetFiltersQuery } from '@/services/notesApi';
 import { FILE_TYPES, SORT_OPTIONS } from '@/lib/constants';
+
+// Filtre değerleri URL query parametrelerinden gelir (boş string = filtre yok).
+export type FilterValues = Record<string, string>;
+
+interface FilterBarProps {
+  values: FilterValues;
+  onChange: (changes: FilterValues) => void;
+  onReset: () => void;
+}
 
 const TEXT_FILTERS = [
   { key: 'courseCode', label: 'Course code', placeholder: 'e.g. CENG101' },
@@ -9,7 +18,7 @@ const TEXT_FILTERS = [
 ];
 
 // Arama sayfasındaki filtre paneli. Değerler URL query parametrelerinde tutulur (paylaşılabilir arama).
-export default function FilterBar({ values, onChange, onReset }) {
+export default function FilterBar({ values, onChange, onReset }: FilterBarProps) {
   const [open, setOpen] = useState(false);
   const { data } = useGetFiltersQuery({ university: values.university });
   const options = data?.data;
@@ -19,7 +28,7 @@ export default function FilterBar({ values, onChange, onReset }) {
   ).length;
 
   // Üniversite değişince, o üniversitede olmayabilecek bölüm seçimi sıfırlanır.
-  const set = (key, value) => onChange(key === 'university' ? { university: value, department: '' } : { [key]: value });
+  const set = (key: string, value: string) => onChange(key === 'university' ? { university: value, department: '' } : { [key]: value });
 
   return (
     <div className="card p-4 @container">
@@ -114,7 +123,7 @@ export default function FilterBar({ values, onChange, onReset }) {
   );
 }
 
-function FileTypeChip({ active, onClick, children }) {
+function FileTypeChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
       type="button"
@@ -129,7 +138,14 @@ function FileTypeChip({ active, onClick, children }) {
   );
 }
 
-function SelectFilter({ label, value, options = [], onChange }) {
+interface SelectFilterProps {
+  label: string;
+  value?: string;
+  options?: string[];
+  onChange: (value: string) => void;
+}
+
+function SelectFilter({ label, value, options = [], onChange }: SelectFilterProps) {
   return (
     <label className="block">
       <span className="block text-xs font-medium text-gray-500 mb-1">{label}</span>

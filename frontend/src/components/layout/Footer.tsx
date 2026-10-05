@@ -1,5 +1,6 @@
+import type { ComponentType } from 'react';
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { ArrowRight, ArrowUp, Mail, Upload } from 'lucide-react';
 import Logo from './Logo';
 import { DiscordIcon, InstagramIcon, TelegramIcon } from '@/components/common/BrandIcons';
@@ -70,7 +71,7 @@ const linkClass = 'text-sm text-white/70 hover:text-white transition-colors';
 const iconButtonClass =
   'w-9 h-9 rounded-lg bg-white/10 text-white/80 flex items-center justify-center hover:bg-white/20 hover:text-white transition-colors';
 
-function SocialLink({ href, label, icon: Icon }) {
+function SocialLink({ href, label, icon: Icon }: { href: string; label: string; icon: ComponentType<{ size?: number }> }) {
   if (!href) {
     return (
       <Link to="/contact#community" className={iconButtonClass} aria-label={label} title={label}>
@@ -93,7 +94,7 @@ function SocialLink({ href, label, icon: Icon }) {
 }
 
 export default function Footer() {
-  const token = useSelector((state) => state.auth.token);
+  const token = useAppSelector((state) => state.auth.token);
 
   return (
     <footer className="mt-16 bg-gradient-to-b from-navy-900 to-navy-950 text-white">

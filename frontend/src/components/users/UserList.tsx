@@ -3,6 +3,17 @@ import { ArrowRight, Users } from 'lucide-react';
 import UserCard from './UserCard';
 import EmptyState from '@/components/common/EmptyState';
 import Spinner from '@/components/common/Spinner';
+import type { UserCard as UserCardData } from '@/types/api';
+
+interface UserListProps {
+  users?: UserCardData[];
+  isLoading?: boolean;
+  emptyTitle?: string;
+  emptyText?: string;
+  previewCount?: number;
+  seeAll?: { to: string; label: string };
+  gridClassName?: string;
+}
 
 // Takipçi / takip edilen listeleri (kullanıcı kartları ızgarası).
 // previewCount verilirse sadece o kadar kişi gösterilir; fazlası için seeAll ({ to, label }) bağlantısı çıkar.
@@ -14,7 +25,7 @@ export default function UserList({
   previewCount,
   seeAll,
   gridClassName = 'grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5',
-}) {
+}: UserListProps) {
   if (isLoading) return <Spinner />;
   if (!users?.length) return <EmptyState icon={Users} title={emptyTitle} text={emptyText} />;
 

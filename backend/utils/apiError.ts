@@ -1,5 +1,13 @@
+export interface FieldError {
+  field?: string;
+  message: string;
+}
+
 class ApiError extends Error {
-  constructor(statusCode, message, errors = []) {
+  statusCode: number;
+  errors: FieldError[];
+
+  constructor(statusCode: number, message: string, errors: FieldError[] = []) {
     super(message);
     this.statusCode = statusCode;
     this.errors = errors;
@@ -7,4 +15,4 @@ class ApiError extends Error {
   }
 }
 
-module.exports = ApiError;
+export default ApiError;

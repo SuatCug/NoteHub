@@ -1,16 +1,16 @@
-const bcrypt = require('bcryptjs');
-const mongoose = require('mongoose');
-const asyncHandler = require('../utils/asyncHandler');
-const ApiError = require('../utils/apiError');
-const { User, Note } = require('../models');
-const { listNotes, PUBLIC_NOTES_MATCH } = require('../services/note.service');
-const { saveAvatar, removeFile } = require('../services/storage.service');
-const { parsePagination, buildPagination } = require('../utils/pagination.util');
-const { wordSearchMatch } = require('../utils/regex.util');
-const { getExtension, matchesSignature } = require('../utils/fileTypes.util');
-const { isBlockedBetween } = require('../services/block.service');
-const { notify, removeNotification } = require('../services/notification.service');
-const { getOnlineUserIds } = require('../services/realtime.service');
+import bcrypt from 'bcryptjs';
+import mongoose, { type Types } from 'mongoose';
+import asyncHandler, { type AuthedRequest } from '../utils/asyncHandler.ts';
+import ApiError from '../utils/apiError.ts';
+import { User, Note } from '../models/index.ts';
+import { listNotes, PUBLIC_NOTES_MATCH } from '../services/note.service.ts';
+import { saveAvatar, removeFile } from '../services/storage.service.ts';
+import { parsePagination, buildPagination } from '../utils/pagination.util.ts';
+import { wordSearchMatch } from '../utils/regex.util.ts';
+import { getExtension, matchesSignature } from '../utils/fileTypes.util.ts';
+import { isBlockedBetween } from '../services/block.service.ts';
+import { notify, removeNotification } from '../services/notification.service.ts';
+import { getOnlineUserIds } from '../services/realtime.service.ts';
 
 const USER_CARD_FIELDS = 'fullName avatarUrl university department';
 
@@ -45,13 +45,14 @@ const searchUsers = asyncHandler(async (req, res) => {
 
 // Profil sayfası: kullanıcı bilgisi + not sayısı + toplam beğeni/indirme + (giriş yapılmışsa) takip durumu.
 const getProfile = asyncHandler(async (req, res) => {
+  const viewerId = req.user?.id;
   const user = await User.findById(req.params.id);
   if (!user) throw new ApiError(404, 'User not found.');
 
   // Profil istatistikleri grupsuz notlardan hesaplanır; "sadece takipçiler" notları kişinin kendisine ve
   // takipçilerine sayılır (profilde listelenen notlarla tutarlı olsun diye).
   const canSeeFollowersNotes =
-    req.user && (req.user.id === user._id.toString() || user.followers.some((id) => id.equals(req.user.id)));
+    viewerId && (viewerId === user._id.toString() || user.followers.some((id) => id.equals(viewerId)));
   const [stats] = await Note.aggregate([
     { $match: { author: user._id, ...(canSeeFollowersNotes ? { group: null } : PUBLIC_NOTES_MATCH) } },
     {
@@ -64,9 +65,9 @@ const getProfile = asyncHandler(async (req, res) => {
     },
   ]);
 
-  const isFollowing = req.user ? user.followers.some((id) => id.equals(req.user.id)) : false;
-  const isBlocked = req.user
-    ? Boolean(await User.exists({ _id: req.user.id, blockedUsers: user._id }))
+  const isFollowing = viewerId ? user.followers.some((id) => id.equals(viewerId)) : false;
+  const isBlocked = viewerId
+    ? Boolean(await User.exists({ _id: viewerId, blockedUsers: user._id }))
     : false;
 
   res.json({
@@ -81,7 +82,7 @@ const getProfile = asyncHandler(async (req, res) => {
       isFollowing,
       // Giriş yapan kullanıcı bu kişiyi engellediyse true.
       isBlocked,
-      isMe: req.user?.id === user._id.toString(),
+      isMe: viewerId === user._id.toString(),
     },
   });
 });
@@ -106,14 +107,15 @@ const getUserNotes = asyncHandler(async (req, res) => {
 });
 
 // Kendisi, engelledikleri ve onu engelleyenler hariç tutulur (akış yan paneli listeleri için).
-const excludeSelfAndBlocked = (me) => ({
+const excludeSelfAndBlocked = (me: { _id: Types.ObjectId; blockedUsers: Types.ObjectId[] }) => ({
   _id: { $nin: [me._id, ...me.blockedUsers] },
   blockedUsers: { $ne: me._id },
 });
 
 // "Active now": karşılıklı takipleşilen kişilerden şu an Socket.io ile bağlı (uygulamayı açık tutan) olanlar.
-const getActiveUsers = asyncHandler(async (req, res) => {
+const getActiveUsers = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = await User.findById(req.user.id).select('following blockedUsers');
+  if (!me) throw new ApiError(404, 'User not found.');
   const base = excludeSelfAndBlocked(me);
   const online = getOnlineUserIds().map((id) => new mongoose.Types.ObjectId(id));
   const match = {
@@ -137,8 +139,9 @@ const getActiveUsers = asyncHandler(async (req, res) => {
 });
 
 // "Who to follow": henüz takip edilmeyen, aynı üniversite/bölümdekiler öncelikli, sonra en çok takipçisi olanlar.
-const getSuggestions = asyncHandler(async (req, res) => {
+const getSuggestions = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = await User.findById(req.user.id).select('following blockedUsers university department');
+  if (!me) throw new ApiError(404, 'User not found.');
   const base = excludeSelfAndBlocked(me);
 
   const users = await User.aggregate([
@@ -174,7 +177,7 @@ const getFollowing = asyncHandler(async (req, res) => {
   res.json({ success: true, data: { users: user.following } });
 });
 
-const follow = asyncHandler(async (req, res) => {
+const follow = asyncHandler<AuthedRequest>(async (req, res) => {
   const targetId = req.params.id;
   if (targetId === req.user.id) throw new ApiError(400, 'You cannot follow yourself.');
   if (await isBlockedBetween(req.user.id, targetId)) throw new ApiError(403, 'You cannot follow this user.');
@@ -191,7 +194,7 @@ const follow = asyncHandler(async (req, res) => {
   });
 });
 
-const unfollow = asyncHandler(async (req, res) => {
+const unfollow = asyncHandler<AuthedRequest>(async (req, res) => {
   const targetId = req.params.id;
 
   const target = await User.findByIdAndUpdate(targetId, { $pull: { followers: req.user.id } }, { returnDocument: 'after' });
@@ -207,7 +210,7 @@ const unfollow = asyncHandler(async (req, res) => {
 });
 
 // Engelleme: iki taraf da birbirine mesaj atamaz ve takip edemez; varsa karşılıklı takip kaldırılır.
-const block = asyncHandler(async (req, res) => {
+const block = asyncHandler<AuthedRequest>(async (req, res) => {
   const me = req.user.id;
   const targetId = req.params.id;
   if (targetId === me) throw new ApiError(400, 'You cannot block yourself.');
@@ -221,22 +224,23 @@ const block = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'User blocked.', data: { isBlocked: true } });
 });
 
-const unblock = asyncHandler(async (req, res) => {
+const unblock = asyncHandler<AuthedRequest>(async (req, res) => {
   await User.updateOne({ _id: req.user.id }, { $pull: { blockedUsers: req.params.id } });
   res.json({ success: true, message: 'User unblocked.', data: { isBlocked: false } });
 });
 
-const updateProfile = asyncHandler(async (req, res) => {
+const updateProfile = asyncHandler<AuthedRequest>(async (req, res) => {
   const user = await User.findById(req.user.id);
+  if (!user) throw new ApiError(404, 'User not found.');
   ['fullName', 'university', 'department', 'bio'].forEach((field) => {
-    if (req.body[field] !== undefined) user[field] = req.body[field];
+    if (req.body[field] !== undefined) user.set(field, req.body[field]);
   });
   await user.save();
 
   res.json({ success: true, message: 'Profile updated.', data: { user: user.toSafeJSON() } });
 });
 
-const updateAvatar = asyncHandler(async (req, res) => {
+const updateAvatar = asyncHandler<AuthedRequest>(async (req, res) => {
   if (!req.file) throw new ApiError(400, 'A profile photo (avatar) is required.');
 
   const ext = getExtension(req.file.originalname);
@@ -245,6 +249,7 @@ const updateAvatar = asyncHandler(async (req, res) => {
   }
 
   const user = await User.findById(req.user.id);
+  if (!user) throw new ApiError(404, 'User not found.');
   const oldAvatar = user.avatarUrl;
   user.avatarUrl = await saveAvatar(req.file.buffer, ext);
   await user.save();
@@ -253,10 +258,11 @@ const updateAvatar = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Profile photo updated.', data: { user: user.toSafeJSON() } });
 });
 
-const changePassword = asyncHandler(async (req, res) => {
+const changePassword = asyncHandler<AuthedRequest>(async (req, res) => {
   const { currentPassword, newPassword } = req.body;
 
   const user = await User.findById(req.user.id).select('+passwordHash');
+  if (!user) throw new ApiError(404, 'User not found.');
   const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
   if (!isMatch) throw new ApiError(401, 'Current password is incorrect.');
 
@@ -266,7 +272,7 @@ const changePassword = asyncHandler(async (req, res) => {
   res.json({ success: true, message: 'Password updated.' });
 });
 
-module.exports = {
+export {
   searchUsers,
   getActiveUsers,
   getSuggestions,

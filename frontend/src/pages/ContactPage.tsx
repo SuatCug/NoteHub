@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useState, type ChangeEvent, type ComponentType, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { CheckCircle2, Clock, LifeBuoy, Mail, ShieldAlert } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PageHeader from '@/components/layout/PageHeader';
 import Alert from '@/components/common/Alert';
 import { DiscordIcon, InstagramIcon, TelegramIcon } from '@/components/common/BrandIcons';
-import { useSendContactMessageMutation } from '@/services/contactApi';
+import { useSendContactMessageMutation, type ContactPayload, type ContactTopic } from '@/services/contactApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 import { SOCIAL_LINKS } from '@/lib/constants';
 
-const TOPICS = [
+const TOPICS: { value: ContactTopic; label: string }[] = [
   { value: 'general', label: 'General question' },
   { value: 'support', label: 'Account & technical support' },
   { value: 'copyright', label: 'Copyright / report content' },
@@ -18,16 +18,16 @@ const TOPICS = [
   { value: 'feedback', label: 'Feedback & ideas' },
 ];
 
-const CHANNELS = [
+const CHANNELS: { key: 'discord' | 'telegram' | 'instagram'; label: string; text: string; icon: typeof DiscordIcon }[] = [
   { key: 'discord', label: 'Discord', text: 'Chat with other students', icon: DiscordIcon },
   { key: 'telegram', label: 'Telegram', text: 'Announcements & updates', icon: TelegramIcon },
   { key: 'instagram', label: 'Instagram', text: 'News and highlights', icon: InstagramIcon },
 ];
 
 export default function ContactPage() {
-  const user = useSelector((state) => state.auth.user);
+  const user = useAppSelector((state) => state.auth.user);
   const [sendMessage, { isLoading }] = useSendContactMessageMutation();
-  const [values, setValues] = useState(() => ({
+  const [values, setValues] = useState<ContactPayload>(() => ({
     name: user?.fullName ?? '',
     email: user?.email ?? '',
     topic: 'general',
@@ -36,9 +36,9 @@ export default function ContactPage() {
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
 
-  const handleChange = (e) => setValues((v) => ({ ...v, [e.target.name]: e.target.value }));
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => setValues((v) => ({ ...v, [e.target.name]: e.target.value }));
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     try {
@@ -230,7 +230,7 @@ export default function ContactPage() {
   );
 }
 
-function InfoRow({ icon: Icon, title, text }) {
+function InfoRow({ icon: Icon, title, text }: { icon: ComponentType<{ size?: number; className?: string }>; title: string; text: ReactNode }) {
   return (
     <div className="flex gap-3">
       <Icon size={18} className="shrink-0 mt-0.5 text-navy-500" />

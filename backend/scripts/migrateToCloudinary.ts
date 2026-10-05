@@ -2,16 +2,16 @@
 // yüklenmiş PDF/JPG/PNG notlarını panelde küçük resimleriyle görünen "image" tipine çevirir.
 // Diskteki dosyalar silinmez (yedek olarak kalır). Tekrar çalıştırmak güvenlidir: taşınmış kayıtlar atlanır.
 // Kullanım: npm run migrate:cloudinary
-require('dotenv').config({ quiet: true });
-const mongoose = require('mongoose');
-const connectDB = require('../config/db');
-const { Note, User } = require('../models');
-const { saveNoteFile, saveAvatar, readNoteFile, removeFile } = require('../services/storage.service');
-const { getExtension } = require('../utils/fileTypes.util');
+import '../config/env.ts';
+import mongoose from 'mongoose';
+import connectDB from '../config/db.ts';
+import { Note, User } from '../models/index.ts';
+import { saveNoteFile, saveAvatar, readNoteFile, removeFile } from '../services/storage.service.ts';
+import { getExtension } from '../utils/fileTypes.util.ts';
 
 const IMAGE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png'];
 
-const needsMigration = (key) => {
+const needsMigration = (key: string) => {
   if (key.startsWith('cloudinary-image:')) return false;
   if (key.startsWith('cloudinary:')) return IMAGE_EXTENSIONS.includes(getExtension(key));
   return true;

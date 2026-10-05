@@ -1,5 +1,5 @@
-const dns = require('dns');
-const mongoose = require('mongoose');
+import dns from 'node:dns';
+import mongoose from 'mongoose';
 
 // Windows'ta Node'un c-ares tabanlı DNS çözücüsü bazı ağlarda (VPN/sanal adaptör vb.)
 // mongodb+srv:// bağlantısının gerektirdiği SRV kaydını çözemiyor. Genel bir DNS
@@ -8,12 +8,12 @@ dns.setServers(['8.8.8.8', '1.1.1.1']);
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGO_URI);
+    await mongoose.connect(process.env.MONGO_URI ?? '');
     console.log('✅ Connected to MongoDB.');
   } catch (error) {
-    console.error('❌ MongoDB connection error:', error.message);
+    console.error('❌ MongoDB connection error:', (error as Error).message);
     process.exit(1);
   }
 };
 
-module.exports = connectDB;
+export default connectDB;

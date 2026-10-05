@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ChangeEventHandler, type FormEvent } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { MessageCircle, Search, Upload } from 'lucide-react';
 import Logo from './Logo';
@@ -8,7 +8,13 @@ import { useGetUnreadCountQuery } from '@/services/messagesApi';
 import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
 import { useFallbackPolling } from '@/lib/socket';
 
-function SearchInput({ value, onChange, placeholder }) {
+interface SearchInputProps {
+  value: string;
+  onChange: ChangeEventHandler<HTMLInputElement>;
+  placeholder: string;
+}
+
+function SearchInput({ value, onChange, placeholder }: SearchInputProps) {
   return (
     <label className="relative block">
       <span className="sr-only">Search notes and people</span>
@@ -43,7 +49,7 @@ export default function Navbar() {
     if (urlQuery !== null) setSearch(urlQuery);
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const params = location.pathname === '/' ? new URLSearchParams(searchParams) : new URLSearchParams();
     const q = search.trim();

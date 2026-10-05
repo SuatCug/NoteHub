@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowRight,
@@ -17,6 +18,7 @@ import {
   User,
   UserPlus,
   Users,
+  type LucideIcon,
 } from 'lucide-react';
 import GuestNavbar from '@/components/layout/GuestNavbar';
 import Footer from '@/components/layout/Footer';
@@ -39,7 +41,7 @@ const STEPS = [
   { title: 'Explore & Connect', text: 'Discover notes from other students, like, comment and message.' },
 ];
 
-const scrollToSection = (id) => {
+const scrollToSection = (id: string) => {
   const el = document.getElementById(id);
   if (!el) return;
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -114,13 +116,13 @@ function DesktopMockup() {
 
         <div className="flex text-[10px]">
           <div className="hidden sm:block w-28 shrink-0 border-r border-gray-100 p-2 space-y-0.5">
-            {[
+            {([
               [Home, 'Home', true],
               [Compass, 'Explore'],
               [MessageCircle, 'Messages'],
               [Users, 'Groups'],
               [User, 'Profile'],
-            ].map(([Icon, label, active]) => (
+            ] satisfies [LucideIcon, string, boolean?][]).map(([Icon, label, active]) => (
               <div
                 key={label}
                 className={`flex items-center gap-1.5 rounded-md px-2 py-1.5 ${active ? 'bg-navy-50 text-navy-700 font-semibold' : 'text-gray-500'}`}
@@ -160,11 +162,11 @@ function DesktopMockup() {
           <div className="hidden md:block lg:hidden xl:block w-32 shrink-0 border-l border-gray-100 p-2.5 space-y-3">
             <div>
               <p className="font-bold text-gray-800 mb-1.5">For You</p>
-              {[
+              {([
                 [UserPlus, 'Following'],
                 [Bookmark, 'Saved notes'],
                 [Download, 'Downloads'],
-              ].map(([Icon, label]) => (
+              ] satisfies [LucideIcon, string][]).map(([Icon, label]) => (
                 <p key={label} className="flex items-center gap-1.5 py-0.5 text-gray-500">
                   <Icon size={10} /> {label}
                 </p>
@@ -333,7 +335,7 @@ function StepsMockup() {
 
 /* ------------------------------------------------------------- Community */
 
-const formatCount = (n) => {
+const formatCount = (n: number) => {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, '')}M`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1).replace(/\.0$/, '')}K`;
   return String(n);
@@ -420,7 +422,7 @@ function CtaSection() {
 
 /* --------------------------------------------------------- Küçük parçalar */
 
-function Pill({ children }) {
+function Pill({ children }: { children: ReactNode }) {
   return (
     <span className="inline-flex rounded-full bg-navy-100/70 px-3 py-1 text-xs sm:text-sm font-semibold text-navy-700">
       {children}
@@ -449,11 +451,23 @@ function MiniBrand() {
   );
 }
 
-function Avatar({ color, size = 'h-7 w-7', ring = false }) {
+function Avatar({ color, size = 'h-7 w-7', ring = false }: { color: string; size?: string; ring?: boolean }) {
   return <span className={`${size} ${color} shrink-0 rounded-full ${ring ? 'ring-2 ring-white' : ''}`} />;
 }
 
-function MockNoteCard({ name, meta, avatar, title, lines, tags, likes, comments, compact = false }) {
+interface MockNoteCardProps {
+  name: string;
+  meta: string;
+  avatar: string;
+  title: string;
+  lines: string[];
+  tags: string[];
+  likes: number;
+  comments: number;
+  compact?: boolean;
+}
+
+function MockNoteCard({ name, meta, avatar, title, lines, tags, likes, comments, compact = false }: MockNoteCardProps) {
   return (
     <div className={`rounded-xl border border-gray-100 bg-white shadow-sm ${compact ? 'p-2' : 'p-3'}`}>
       <div className="flex items-center gap-2">

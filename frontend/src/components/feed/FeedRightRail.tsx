@@ -1,5 +1,6 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { Bookmark, FileText, UserPlus, Users } from 'lucide-react';
 import UserAvatar from '@/components/users/UserAvatar';
 import FollowButton from '@/components/users/FollowButton';
@@ -22,7 +23,7 @@ export default function FeedRightRail() {
   );
 }
 
-function RailCard({ title, children }) {
+function RailCard({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="card p-4">
       <h2 className="text-sm font-bold text-gray-900">{title}</h2>
@@ -32,7 +33,7 @@ function RailCard({ title, children }) {
 }
 
 function ForYouCard() {
-  const userId = useSelector((state) => state.auth.user?.id);
+  const userId = useAppSelector((state) => state.auth.user?.id);
   const links = [
     { to: '/?tab=following', icon: UserPlus, label: 'People you follow' },
     { to: '/?tab=saved', icon: Bookmark, label: 'Saved notes' },

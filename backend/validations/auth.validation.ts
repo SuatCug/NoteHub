@@ -1,6 +1,6 @@
-const { body } = require('express-validator');
-const { User } = require('../models');
-const { requireEduEmail } = require('../config/features');
+import { body } from 'express-validator';
+import { EDU_EMAIL_REGEX } from '../models/user.model.ts';
+import { requireEduEmail } from '../config/features.ts';
 
 // REQUIRE_EDU_EMAIL=true ise sadece .edu.tr, değilse herhangi geçerli bir e-posta kabul edilir.
 const registerEmailRule = body('email')
@@ -8,7 +8,7 @@ const registerEmailRule = body('email')
   .toLowerCase()
   .custom((email) => {
     if (requireEduEmail()) {
-      if (!User.EDU_EMAIL_REGEX.test(email)) {
+      if (!EDU_EMAIL_REGEX.test(email)) {
         throw new Error('Only institutional .edu.tr email addresses can register.');
       }
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -32,4 +32,4 @@ const loginRules = [
 
 const verifyEmailRules = [body('token').trim().notEmpty().withMessage('Verification token is required.')];
 
-module.exports = { registerRules, loginRules, verifyEmailRules };
+export { registerRules, loginRules, verifyEmailRules };

@@ -1,10 +1,8 @@
-module.exports = {
-  User: require('./user.model'),
-  Note: require('./note.model'),
-  Group: require('./group.model'),
-  GroupMessage: require('./groupMessage.model'),
-  ContactMessage: require('./contactMessage.model'),
-  Conversation: require('./conversation.model'),
-  DirectMessage: require('./directMessage.model'),
-  Notification: require('./notification.model'),
-};
+export { User } from './user.model.ts';
+export { Note } from './note.model.ts';
+export { Group } from './group.model.ts';
+export { GroupMessage } from './groupMessage.model.ts';
+export { ContactMessage } from './contactMessage.model.ts';
+export { Conversation } from './conversation.model.ts';
+export { DirectMessage } from './directMessage.model.ts';
+export { Notification } from './notification.model.ts';

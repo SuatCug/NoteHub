@@ -133,8 +133,8 @@ doğrulamadan sitede gezemez.
 
 | | |
 |---|---|
-| **Frontend** | React 19, Vite 8, Redux Toolkit + RTK Query, React Router 7, Tailwind CSS 4, Socket.io Client, lucide-react, pdf.js (pdfjs-dist), oxlint |
-| **Backend** | Node.js, Express 5, MongoDB + Mongoose, Socket.io, JWT (jsonwebtoken), bcryptjs, express-validator, Multer, helmet, morgan, cors, Nodemailer, dotenv |
+| **Frontend** | React 19 + TypeScript (strict), Vite 8, Redux Toolkit + RTK Query, React Router 7, Tailwind CSS 4, Socket.io Client, lucide-react, pdf.js (pdfjs-dist), oxlint |
+| **Backend** | Node.js + TypeScript (strict, derleme adımı yok — Node `.ts` dosyalarını doğrudan çalıştırır), Express 5, MongoDB + Mongoose, Socket.io, JWT (jsonwebtoken), bcryptjs, express-validator, Multer, helmet, morgan, cors, Nodemailer, dotenv |
 | **Depolama** | Cloudinary (yapılandırılmamışsa `backend/uploads` yerel disk) |
 | **Deploy** | Netlify (frontend) · Render (backend) · MongoDB Atlas (veritabanı) |
 
@@ -143,7 +143,7 @@ doğrulamadan sitede gezemez.
 ```
 proje4/
 ├── backend/                 # Express 5 API + Socket.io
-│   ├── config/              # MongoDB bağlantısı, özellik anahtarları (features.js)
+│   ├── config/              # MongoDB bağlantısı, özellik anahtarları (features.ts), betikler için .env yükleyici
 │   ├── controllers/         # auth, note, comment, user, group, message, notification, stats, contact
 │   ├── middlewares/         # auth (+ doğrulanmamış oturum kilidi), verified, validate, upload, rateLimit, error
 │   ├── models/              # User, Note, Group, GroupMessage, Conversation, DirectMessage,
@@ -152,11 +152,12 @@ proje4/
 │   ├── services/            # realtime (socket emit + çevrimiçi durum), storage, notification, note
 │   │                        # (görünürlük kuralları), group, block, mail (Brevo / SMTP)
 │   ├── sockets/             # Socket.io sunucusu: JWT el sıkışması, kullanıcı/grup odaları, presence
-│   ├── scripts/             # seed.js (demo veri), migrateToCloudinary.js
+│   ├── scripts/             # seed.ts (demo veri), migrateToCloudinary.ts
+│   ├── types/               # Express req.user tanımı, ortak tipler
 │   ├── validations/         # express-validator kural setleri
 │   ├── utils/               # jwt, pagination, regex (kelime bazlı arama), dosya imzası kontrolü
 │   ├── uploads/             # yerel dosya deposu (Cloudinary kapalıyken)
-│   └── index.js             # sunucu girişi (HTTP + Socket.io aynı portta)
+│   └── index.ts             # sunucu girişi (HTTP + Socket.io aynı portta)
 ├── frontend/                # React (Vite) istemcisi
 │   ├── public/              # favicon, _redirects (Netlify SPA yönlendirmesi)
 │   └── src/
@@ -178,7 +179,7 @@ proje4/
 
 ## 🚀 Yerelde çalıştırma
 
-Gerekli: **Node.js 20+** ve bir **MongoDB** veritabanı
+Gerekli: **Node.js 22.18+** (backend `.ts` dosyalarını doğrudan çalıştırır) ve bir **MongoDB** veritabanı
 ([MongoDB Atlas](https://www.mongodb.com/atlas) ücretsiz planı ya da yerel `mongod`).
 Cloudinary ve SMTP isteğe bağlıdır.
 
@@ -198,7 +199,7 @@ npm run dev                 # http://localhost:5173
 ```
 
 > Windows'ta `cp` yerine `copy` kullanabilirsiniz. Demo hesapların e-posta ve şifreleri
-> `backend/scripts/seed.js` içinde tanımlıdır.
+> `backend/scripts/seed.ts` içinde tanımlıdır.
 
 ### Ortam değişkenleri
 
@@ -233,11 +234,13 @@ npm run dev                 # http://localhost:5173
 |---|---|---|
 | backend | `npm run dev` | Nodemon ile API |
 | backend | `npm start` | Prod modda API |
+| backend | `npm run typecheck` | TypeScript tip kontrolü (`tsc`) |
 | backend | `npm run seed` | Veritabanına demo kullanıcı, not, grup ve sohbet verisi yükle |
 | backend | `npm run seed:clear` | Demo veriyi sil |
 | backend | `npm run migrate:cloudinary` | Yerel diskteki dosyaları Cloudinary'ye taşı |
 | frontend | `npm run dev` | Vite geliştirme sunucusu |
-| frontend | `npm run build` | Üretim derlemesi (`dist/`) |
+| frontend | `npm run build` | Tip kontrolü + üretim derlemesi (`dist/`) |
+| frontend | `npm run typecheck` | Sadece TypeScript tip kontrolü |
 | frontend | `npm run preview` | Derlemeyi yerelde önizle |
 | frontend | `npm run lint` | oxlint |
 
@@ -307,6 +310,7 @@ kullanıcılar (60 sn) yedek olarak polling ile yenilenir.
 
 **Backend → Render (veya Railway, Fly.io vb.)**
 - *Root directory* = `backend`, *Build command* = `npm install`, *Start command* = `npm start`.
+- Derleme adımı yoktur: `npm start` = `node index.ts`. Node sürümü `package.json` → `engines` (>= 22.18) ile seçilir.
 - Ortam değişkenleri: `MONGO_URI` (MongoDB Atlas), `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_URL`,
   `CLOUDINARY_URL`, `NODE_ENV=production`; e-posta doğrulaması için `REQUIRE_EMAIL_VERIFICATION=true`,
   `BREVO_API_KEY` ve `MAIL_FROM` (değeri tırnaksız, örn. `SearchNote <adres@ornek.com>`).

@@ -1,19 +1,19 @@
 import { Link, NavLink, useLocation, useSearchParams } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useAppSelector } from '@/app/hooks';
 import { Bookmark, Compass, Home, MessageCircle, UserRound, Users } from 'lucide-react';
 import UserAvatar from '@/components/users/UserAvatar';
 import { useGetUnreadCountQuery } from '@/services/messagesApi';
 import { UNREAD_POLL_INTERVAL_MS } from '@/lib/constants';
 import { useFallbackPolling } from '@/lib/socket';
 
-const itemClass = (active) =>
+const itemClass = (active: boolean) =>
   `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium transition-colors ${
     active ? 'bg-navy-50 text-navy-700 font-semibold' : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
   }`;
 
 // Ana sayfa akışının sol menüsü (sadece geniş ekranlarda; telefonda alt sekme çubuğu kullanılır).
 export default function FeedSidebar() {
-  const user = useSelector((state) => state.auth.user);
+  const user = useAppSelector((state) => state.auth.user);
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const { data } = useGetUnreadCountQuery(undefined, {

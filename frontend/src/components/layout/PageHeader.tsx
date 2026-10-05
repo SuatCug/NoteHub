@@ -1,5 +1,14 @@
 // Bilgi sayfalarının (Hakkımızda, Yardım, İletişim vb.) üstündeki lacivert başlık alanı. İçerik ortalıdır.
-export default function PageHeader({ eyebrow, title, text, children }) {
+import type { ReactNode } from 'react';
+
+interface PageHeaderProps {
+  eyebrow?: ReactNode;
+  title: ReactNode;
+  text?: ReactNode;
+  children?: ReactNode;
+}
+
+export default function PageHeader({ eyebrow, title, text, children }: PageHeaderProps) {
   return (
     <header className="rounded-3xl bg-gradient-to-br from-navy-800 to-navy-900 px-6 py-10 sm:px-10 sm:py-14 text-white text-center">
       {eyebrow && <p className="text-xs font-semibold uppercase tracking-widest text-navy-200">{eyebrow}</p>}

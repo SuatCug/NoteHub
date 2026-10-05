@@ -1,22 +1,23 @@
-const { Server } = require('socket.io');
-const { verifyToken } = require('../utils/jwt.util');
-const { User, Group } = require('../models');
-const realtime = require('../services/realtime.service');
+import type { Server as HttpServer } from 'node:http';
+import { Server } from 'socket.io';
+import { verifyToken } from '../utils/jwt.util.ts';
+import { User, Group } from '../models/index.ts';
+import * as realtime from '../services/realtime.service.ts';
 
 // Kullanıcıyı takip edenlere "çevrimiçi durumu değişti" bildirimi: istemciler "Active now" listesini yeniler
 // (listede kimin görüneceğine — karşılıklı takip — sunucu karar verir).
-const broadcastPresence = async (userId) => {
+const broadcastPresence = async (userId: string) => {
   const user = await User.findById(userId).select('followers').lean();
   if (user?.followers?.length) realtime.emitToUsers(user.followers, 'presence:changed', { userId });
 };
 
-const touchActivity = (userId) =>
+const touchActivity = (userId: string) =>
   User.updateOne({ _id: userId }, { $set: { lastActiveAt: new Date() } }).catch(() => {});
 
 // Socket.io sunucusunu HTTP sunucusuna bağlar.
 // Olaylar sadece "bir şey değişti" sinyali taşır; istemci ilgili veriyi REST API'den yeniden çeker.
 // Böylece yetki kontrolleri tek yerde (REST) kalır.
-const initSocket = (httpServer, allowedOrigins) => {
+const initSocket = (httpServer: HttpServer, allowedOrigins: string[] | undefined) => {
   const io = new Server(httpServer, {
     cors: { origin: allowedOrigins?.length ? allowedOrigins : '*' },
   });
@@ -67,4 +68,4 @@ const initSocket = (httpServer, allowedOrigins) => {
   return io;
 };
 
-module.exports = initSocket;
+export default initSocket;

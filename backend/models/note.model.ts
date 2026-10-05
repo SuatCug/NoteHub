@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+import mongoose, { type HydratedDocumentFromSchema } from 'mongoose';
 
 const commentSchema = new mongoose.Schema(
   {
@@ -19,7 +19,7 @@ const noteSchema = new mongoose.Schema(
     courseCode: {
       type: String,
       index: true,
-      set: (v) => (typeof v === 'string' ? v.replace(/\s+/g, '').toUpperCase() : v),
+      set: (v: unknown) => (typeof v === 'string' ? v.replace(/\s+/g, '').toUpperCase() : v),
     },
     courseName: { type: String, required: true, trim: true }, // Örn: Computer Programming I
     instructorName: { type: String, trim: true }, // Örn: Prof. Dr. Ahmet Yılmaz
@@ -43,4 +43,6 @@ const noteSchema = new mongoose.Schema(
 
 noteSchema.index({ createdAt: -1 });
 
-module.exports = mongoose.model('Note', noteSchema);
+export const Note = mongoose.model('Note', noteSchema);
+export type NoteDocument = HydratedDocumentFromSchema<typeof noteSchema>;
+export default Note;

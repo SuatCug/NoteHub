@@ -1,9 +1,57 @@
-const mongoose = require('mongoose');
-const { requireEmailVerification } = require('../config/features');
+import { Schema, model, type HydratedDocument, type Model, type Types } from 'mongoose';
+import { requireEmailVerification } from '../config/features.ts';
 
-const EDU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.edu\.tr$/;
+// .edu.tr şartı (REQUIRE_EDU_EMAIL) validations/auth.validation.ts'te uygulanır.
+export const EDU_EMAIL_REGEX = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.edu\.tr$/;
 
-const userSchema = new mongoose.Schema(
+export interface IUser {
+  email: string;
+  passwordHash: string;
+  fullName: string;
+  university: string;
+  department: string;
+  avatarUrl: string;
+  bio: string;
+  followers: Types.ObjectId[];
+  following: Types.ObjectId[];
+  blockedUsers: Types.ObjectId[];
+  savedNotes: Types.ObjectId[];
+  lastActiveAt?: Date;
+  isVerified: boolean;
+  verificationTokenHash?: string;
+  verificationTokenExpires?: Date;
+  createdAt: Date;
+}
+
+// Başka kullanıcıların görebileceği profil görünümü.
+export interface PublicUserJSON {
+  id: Types.ObjectId;
+  fullName: string;
+  university: string;
+  department: string;
+  avatarUrl: string;
+  bio: string;
+  followersCount: number;
+  followingCount: number;
+  createdAt: Date;
+}
+
+// Kullanıcının kendi hesabı için (e-posta ve doğrulama durumu dahil) döndürülen görünüm.
+export interface SafeUserJSON extends PublicUserJSON {
+  email: string;
+  isVerified: boolean;
+}
+
+interface IUserMethods {
+  toPublicJSON(): PublicUserJSON;
+  toSafeJSON(): SafeUserJSON;
+  hasVerifiedAccess(): boolean;
+}
+
+type UserModel = Model<IUser, object, IUserMethods>;
+export type UserDocument = HydratedDocument<IUser, IUserMethods>;
+
+const userSchema = new Schema<IUser, UserModel, IUserMethods>(
   {
     email: {
       type: String,
@@ -11,7 +59,6 @@ const userSchema = new mongoose.Schema(
       unique: true,
       trim: true,
       lowercase: true,
-      // .edu.tr şartı (REQUIRE_EDU_EMAIL) validations/auth.validation.js'te uygulanır.
     },
     passwordHash: { type: String, required: true, select: false },
     fullName: { type: String, required: true, trim: true },
@@ -19,12 +66,12 @@ const userSchema = new mongoose.Schema(
     department: { type: String, required: true, trim: true },
     avatarUrl: { type: String, default: '' },
     bio: { type: String, default: '', maxlength: 500 },
-    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
-    following: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    followers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    following: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     // Engellenen kullanıcılar: birbirine mesaj atamaz, takip edemez; engelleyen kişi onların aramasında çıkmaz.
-    blockedUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    blockedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
     // Kaydedilen (yer imi) notlar: sadece kullanıcının kendisi görür.
-    savedNotes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Note' }],
+    savedNotes: [{ type: Schema.Types.ObjectId, ref: 'Note' }],
     // Son istek zamanı ("Active now" listesi için; auth middleware'de en fazla dakikada bir güncellenir).
     lastActiveAt: { type: Date, index: true },
     // Kurumsal e-posta doğrulaması: doğrulanmamış kullanıcı giriş yapabilir ama
@@ -33,35 +80,33 @@ const userSchema = new mongoose.Schema(
     verificationTokenHash: { type: String, select: false },
     verificationTokenExpires: { type: Date, select: false },
   },
-  { timestamps: { createdAt: true, updatedAt: false } }
+  {
+    timestamps: { createdAt: true, updatedAt: false },
+    methods: {
+      toPublicJSON() {
+        const { _id, fullName, university, department, avatarUrl, bio, followers, following, createdAt } = this;
+        return {
+          id: _id,
+          fullName,
+          university,
+          department,
+          avatarUrl,
+          bio,
+          followersCount: followers.length,
+          followingCount: following.length,
+          createdAt,
+        };
+      },
+      toSafeJSON() {
+        return { ...this.toPublicJSON(), email: this.email, isVerified: this.hasVerifiedAccess() };
+      },
+      // Doğrulama şartı kapalıyken (REQUIRE_EMAIL_VERIFICATION=false) herkes doğrulanmış sayılır.
+      hasVerifiedAccess() {
+        return this.isVerified || !requireEmailVerification();
+      },
+    },
+  }
 );
 
-// Başka kullanıcıların görebileceği profil görünümü.
-userSchema.methods.toPublicJSON = function toPublicJSON() {
-  const { _id, fullName, university, department, avatarUrl, bio, followers, following, createdAt } = this;
-  return {
-    id: _id,
-    fullName,
-    university,
-    department,
-    avatarUrl,
-    bio,
-    followersCount: followers.length,
-    followingCount: following.length,
-    createdAt,
-  };
-};
-
-// Kullanıcının kendi hesabı için (e-posta ve doğrulama durumu dahil) döndürülen görünüm.
-userSchema.methods.toSafeJSON = function toSafeJSON() {
-  return { ...this.toPublicJSON(), email: this.email, isVerified: this.hasVerifiedAccess() };
-};
-
-// Doğrulama şartı kapalıyken (REQUIRE_EMAIL_VERIFICATION=false) herkes doğrulanmış sayılır.
-userSchema.methods.hasVerifiedAccess = function hasVerifiedAccess() {
-  return this.isVerified || !requireEmailVerification();
-};
-
-userSchema.statics.EDU_EMAIL_REGEX = EDU_EMAIL_REGEX;
-
-module.exports = mongoose.model('User', userSchema);
+export const User = model<IUser, UserModel>('User', userSchema);
+export default User;

@@ -1,15 +1,14 @@
-require('dotenv').config();
-const http = require('http');
-const path = require('path');
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-
-const connectDB = require('./config/db');
-const routes = require('./routes');
-const initSocket = require('./sockets');
-const { notFound, errorHandler } = require('./middlewares/error.middleware');
+import 'dotenv/config';
+import http from 'node:http';
+import path from 'node:path';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import connectDB from './config/db.ts';
+import routes from './routes/index.ts';
+import initSocket from './sockets/index.ts';
+import { notFound, errorHandler } from './middlewares/error.middleware.ts';
 
 const app = express();
 
@@ -28,9 +27,9 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Sadece avatarlar herkese açık servis edilir; not dosyaları yalnızca /api/notes/:id/download ile indirilir.
-app.use('/uploads/avatars', express.static(path.join(__dirname, 'uploads', 'avatars')));
+app.use('/uploads/avatars', express.static(path.join(import.meta.dirname, 'uploads', 'avatars')));
 
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({ success: true, message: 'SearchNote API is running.' });
 });
 

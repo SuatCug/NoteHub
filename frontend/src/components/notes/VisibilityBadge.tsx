@@ -1,7 +1,8 @@
 import { UserCheck } from 'lucide-react';
+import type { NoteVisibility } from '@/types/api';
 
 // "Sadece takipçiler" notlarında gösterilen rozet; herkese açık notlarda hiçbir şey göstermez.
-export default function VisibilityBadge({ visibility, className = '' }) {
+export default function VisibilityBadge({ visibility, className = '' }: { visibility?: NoteVisibility; className?: string }) {
   if (visibility !== 'followers') return null;
   return (
     <span

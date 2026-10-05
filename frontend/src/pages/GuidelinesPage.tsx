@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, type LucideIcon } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import PageHeader from '@/components/layout/PageHeader';
 
@@ -67,7 +67,14 @@ export default function GuidelinesPage() {
   );
 }
 
-function GuidelineList({ title, items, icon: Icon, tone }) {
+interface GuidelineListProps {
+  title: string;
+  items: string[];
+  icon: LucideIcon;
+  tone: string;
+}
+
+function GuidelineList({ title, items, icon: Icon, tone }: GuidelineListProps) {
   return (
     <section className="card p-6">
       <h2 className="text-lg font-bold text-gray-900">{title}</h2>
