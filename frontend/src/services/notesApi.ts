@@ -44,6 +44,8 @@ export const notesApi = baseApi.injectEndpoints({
     getNote: builder.query<NoteResponse, string>({
       query: (id) => `/notes/${id}`,
       providesTags: (_result, _error, id) => [{ type: 'Note', id }],
+      // Başkalarının beğeni/yorumları önbellekte görünmez; detay sayfası her açılışta tazelenir.
+      refetchOnMountOrArgChange: true,
     }),
     createNote: builder.mutation<NoteResponse, FormData>({
       // body: FormData (dosya alanı "file")
@@ -74,7 +76,8 @@ export const notesApi = baseApi.injectEndpoints({
           patch.undo();
         }
       },
-      invalidatesTags: ['NoteList', 'User'],
+      // Kartlardan yapılan beğeniler de detay ve beğenenler listesine yansısın.
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'Note', id }, 'NoteList', 'User'],
     }),
     getNoteLikes: builder.query<ApiResponse<Paginated<NoteLiker>>, { id: string; page?: number }>({
       query: ({ id, page = 1 }) => ({ url: `/notes/${id}/likes`, params: { page, limit: 20 } }),

@@ -23,7 +23,8 @@ export default function RealtimeBridge() {
       if (connectedBefore) invalidate(REALTIME_TAGS);
       connectedBefore = true;
     });
-    socket.on('notifications:changed', () => invalidate(['Notifications']));
+    // Bildirim (beğeni/yorum) gelince açık not detayı da sayıları güncellesin.
+    socket.on('notifications:changed', () => invalidate(['Notifications', 'Note']));
     socket.on('message:changed', ({ conversationId }) =>
       invalidate([{ type: 'Conversation', id: conversationId }, 'Conversations', 'Unread'])
     );
