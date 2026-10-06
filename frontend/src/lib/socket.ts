@@ -5,14 +5,19 @@ import { API_URL } from '@/services/baseApi';
 // Sunucudan gelen olaylar sadece "bir şey değişti" sinyali taşır (bkz. backend/sockets/index.js).
 export interface ServerToClientEvents {
   'notifications:changed': () => void;
-  'message:changed': (payload: { conversationId: string }) => void;
+  'message:changed': (payload: { conversationId: string; senderId?: string }) => void;
   'group:message': (payload: { groupId: string }) => void;
   'presence:changed': (payload: { userId: string }) => void;
+  // Mesajlaştığım biri çevrimiçi oldu / çıktı.
+  'dm:presence': (payload: { userId: string }) => void;
+  // Konuşmadaki karşı taraf yazıyor.
+  'dm:typing': (payload: { conversationId: string; userId: string }) => void;
 }
 
 export interface ClientToServerEvents {
   'group:join': (groupId: string, ack?: (res: { ok: boolean }) => void) => void;
   'group:leave': (groupId: string) => void;
+  'dm:typing': (conversationId: string) => void;
 }
 
 export type AppSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -77,3 +82,62 @@ export const useSocketConnected = () => useSyncExternalStore(subscribe, () => Bo
 // Veriler normalde socket olaylarıyla anında yenilenir; bağlantı yokken (koptu / kurulamadı)
 // yedek olarak verilen aralıkla sorgulama (polling) yapılır.
 export const useFallbackPolling = (intervalMs: number) => (useSocketConnected() ? 0 : intervalMs);
+
+// --- "Yazıyor..." göstergesi ---
+// Karşı taraf yazarken birkaç saniyede bir sinyal gelir; son sinyalden bu kadar süre sonra gösterge kalkar.
+const TYPING_TTL_MS = 4000;
+// Kendi yazarken sinyali en fazla bu aralıkla gönderiyoruz.
+const TYPING_THROTTLE_MS = 2500;
+
+const typingTimers = new Map<string, ReturnType<typeof setTimeout>>();
+let typingSnapshot: ReadonlySet<string> = new Set();
+const typingListeners = new Set<() => void>();
+
+const setTyping = (conversationId: string, on: boolean) => {
+  const next = new Set(typingSnapshot);
+  if (on) next.add(conversationId);
+  else next.delete(conversationId);
+  typingSnapshot = next;
+  typingListeners.forEach((listener) => listener());
+};
+
+export const markTyping = (conversationId: string) => {
+  clearTimeout(typingTimers.get(conversationId));
+  typingTimers.set(
+    conversationId,
+    setTimeout(() => {
+      typingTimers.delete(conversationId);
+      setTyping(conversationId, false);
+    }, TYPING_TTL_MS)
+  );
+  if (!typingSnapshot.has(conversationId)) setTyping(conversationId, true);
+};
+
+// Karşı taraftan mesaj gelince gösterge hemen kalkar (yazmaya devam ederse yeni sinyalle geri gelir).
+export const clearTyping = (conversationId: string) => {
+  clearTimeout(typingTimers.get(conversationId));
+  typingTimers.delete(conversationId);
+  if (typingSnapshot.has(conversationId)) setTyping(conversationId, false);
+};
+
+const subscribeTyping = (listener: () => void) => {
+  typingListeners.add(listener);
+  return () => {
+    typingListeners.delete(listener);
+  };
+};
+
+// Şu an karşı tarafın yazdığı konuşmaların id'leri.
+export const useTypingConversations = () => useSyncExternalStore(subscribeTyping, () => typingSnapshot);
+
+const lastTypingSent = new Map<string, number>();
+
+export const sendTyping = (conversationId: string) => {
+  const now = Date.now();
+  if (!socket?.connected || now - (lastTypingSent.get(conversationId) ?? 0) < TYPING_THROTTLE_MS) return;
+  lastTypingSent.set(conversationId, now);
+  socket.emit('dm:typing', conversationId);
+};
+
+// Mesaj gönderilince bir sonraki tuşta hemen yeni sinyal gidebilsin.
+export const resetTypingThrottle = (conversationId: string) => lastTypingSent.delete(conversationId);

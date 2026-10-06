@@ -30,12 +30,24 @@ export const messagesApi = baseApi.injectEndpoints({
     }),
     sendDirectMessage: builder.mutation<
       ApiResponse<{ message: DirectMessage }>,
-      { id: string; text: string; noteId?: string | null }
+      { id: string; text: string; noteId?: string | null; replyTo?: string | null }
     >({
-      query: ({ id, text, noteId }) => ({
+      query: ({ id, text, noteId, replyTo }) => ({
         url: `/messages/conversations/${id}/messages`,
         method: 'POST',
-        body: { text, ...(noteId && { noteId }) },
+        body: { text, ...(noteId && { noteId }), ...(replyTo && { replyTo }) },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'Conversation', id }, 'Conversations'],
+    }),
+    // Sadece kendi mesajını düzenleyebilir.
+    editDirectMessage: builder.mutation<
+      ApiResponse<{ message: DirectMessage }>,
+      { id: string; messageId: string; text: string }
+    >({
+      query: ({ id, messageId, text }) => ({
+        url: `/messages/conversations/${id}/messages/${messageId}`,
+        method: 'PATCH',
+        body: { text },
       }),
       invalidatesTags: (_result, _error, { id }) => [{ type: 'Conversation', id }, 'Conversations'],
     }),
@@ -57,6 +69,7 @@ export const {
   useGetConversationQuery,
   useStartConversationMutation,
   useSendDirectMessageMutation,
+  useEditDirectMessageMutation,
   useDeleteDirectMessageMutation,
   useDeleteConversationMutation,
 } = messagesApi;

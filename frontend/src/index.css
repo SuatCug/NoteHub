@@ -40,8 +40,58 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Yatay kayan çip satırları için kaydırma çubuğunu gizler. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 body {
   @apply bg-gray-100 text-gray-900 font-sans antialiased;
+}
+
+/* Telefonda sohbet tam ekran açıkken arkadaki sayfa kaymasın. */
+@media (max-width: 1023px) {
+  html.chat-open,
+  html.chat-open body {
+    overflow: hidden;
+  }
+}
+
+/* Sohbet: "yazıyor" noktaları ve alıntıya gidince mesajın kısa süre vurgulanması. */
+@keyframes typing-dot {
+  0%, 60%, 100% { opacity: 0.35; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-2px); }
+}
+.typing-dot {
+  animation: typing-dot 1.2s infinite ease-in-out;
+}
+@keyframes message-flash {
+  0%, 100% { background-color: transparent; }
+  25% { background-color: rgb(195 210 233 / 0.55); }
+}
+.message-flash {
+  animation: message-flash 1.4s ease-in-out;
+}
+@keyframes sheet-up {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.sheet-up {
+  animation: sheet-up 0.16s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .typing-dot,
+  .message-flash,
+  .sheet-up {
+    animation: none;
+  }
 }
 
 /* Tailwind'in preflight resetinde <button> varsayılan olarak cursor:default alıyor;

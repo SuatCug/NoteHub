@@ -1,28 +1,70 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type SyntheticEvent } from 'react';
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+  type SyntheticEvent,
+} from 'react';
 import { skipToken } from '@reduxjs/toolkit/query/react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAppSelector } from '@/app/hooks';
-import { ArrowLeft, FileText, MessagesSquare, MoreVertical, Paperclip, SendHorizontal, Trash2, X } from 'lucide-react';
-import UserAvatar from '@/components/users/UserAvatar';
+import {
+  ArrowLeft,
+  ArrowUp,
+  Check,
+  CheckCheck,
+  ChevronLeft,
+  MoreHorizontal,
+  MoreVertical,
+  Paperclip,
+  Pencil,
+  Plus,
+  Reply,
+  Smile,
+  Trash2,
+  UserRound,
+  X,
+} from 'lucide-react';
+import ChatAvatar from './ChatAvatar';
+import MessageBubble from './MessageBubble';
+import MessageActionMenu, { type MessageAction } from './MessageActionMenu';
+import NotePickerSheet from './NotePickerSheet';
 import BlockButton from '@/components/users/BlockButton';
 import Spinner from '@/components/common/Spinner';
 import Alert from '@/components/common/Alert';
 import {
   useDeleteConversationMutation,
   useDeleteDirectMessageMutation,
+  useEditDirectMessageMutation,
   useGetConversationQuery,
   useSendDirectMessageMutation,
 } from '@/services/messagesApi';
 import { useGetNoteQuery } from '@/services/notesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
-import { timeAgo } from '@/lib/format';
-import { useFallbackPolling } from '@/lib/socket';
-import type { MessageNote } from '@/types/api';
+import { clockTime, dayLabel, isSameDay, lastSeenLabel } from '@/lib/chatTime';
+import { resetTypingThrottle, sendTyping, useFallbackPolling, useTypingConversations } from '@/lib/socket';
+import type { DirectMessage } from '@/types/api';
 
 // Yeni mesajlar Socket.io ile anında gelir; bağlantı yoksa açık konuşma bu aralıkla yoklanır.
 const POLL_INTERVAL_MS = 5000;
+// Aynı kişinin bu süre içindeki ardışık mesajları tek grup olarak çizilir (saat sadece grubun sonunda).
+const GROUP_WINDOW_MS = 5 * 60 * 1000;
+const LONG_PRESS_MS = 450;
+const EMOJIS = ['😀', '😂', '😊', '😍', '🥲', '😅', '🤔', '😮', '😢', '😡', '👍', '👎', '👏', '🙏', '💪', '🔥', '❤️', '💯', '🎉', '✅', '📚', '📝', '📌', '💡', '⏰', '☕', '🤝', '👀'];
 
-// Birebir sohbet paneli. ?note=<id> ile açıldıysa ("Ask the author") not, gönderilecek mesaja iliştirilir.
+const isCoarsePointer = () => window.matchMedia('(pointer: coarse)').matches;
+
+interface ActionState {
+  message: DirectMessage;
+  rect: DOMRect;
+}
+
+// Birebir sohbet. ?note=<id> ile açıldıysa ("Ask the author" ya da "+") not, gönderilecek mesaja iliştirilir.
 export default function ChatPanel({ conversationId }: { conversationId: string }) {
   const me = useAppSelector((state) => state.auth.user);
   const navigate = useNavigate();
@@ -35,30 +77,61 @@ export default function ChatPanel({ conversationId }: { conversationId: string }
   });
   const attachedNote = useGetNoteQuery(attachedNoteId || skipToken);
   const [sendMessage, { isLoading: sending }] = useSendDirectMessageMutation();
+  const [editMessage, { isLoading: savingEdit }] = useEditDirectMessageMutation();
   const [deleteMessage] = useDeleteDirectMessageMutation();
   const [deleteConversation] = useDeleteConversationMutation();
+  const typingNow = useTypingConversations().has(conversationId);
 
   const [text, setText] = useState('');
   const [sendError, setSendError] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [notePickerOpen, setNotePickerOpen] = useState(false);
+  const [replyTo, setReplyTo] = useState<DirectMessage | null>(null);
+  const [editing, setEditing] = useState<DirectMessage | null>(null);
+  const [action, setAction] = useState<ActionState | null>(null);
+  const [toast, setToast] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const nearBottomRef = useRef(true);
 
   const conversation = data?.data?.conversation;
   const messages = data?.data?.messages;
   const lastId = messages?.at(-1)?._id;
   const other = conversation?.otherUser;
+  const otherReadAt = conversation?.otherLastReadAt ? new Date(conversation.otherLastReadAt).getTime() : 0;
 
-  // Yeni mesaj gelince sadece mesaj listesini en alta kaydır.
-  useEffect(() => {
+  const scrollToBottom = () => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [lastId]);
+  };
 
-  // Konuşma değişince yazma kutusuna odaklan.
+  // Yeni mesaj gelince en alta kaydır; "yazıyor" balonu çıkınca kullanıcı zaten alttaysa onu da göster.
+  useLayoutEffect(scrollToBottom, [lastId]);
+  useLayoutEffect(() => {
+    if (typingNow && nearBottomRef.current) scrollToBottom();
+  }, [typingNow]);
+
+  // Masaüstünde konuşma açılınca yazma kutusuna odaklan (telefonda klavye kendiliğinden açılmasın).
   useEffect(() => {
-    inputRef.current?.focus();
+    if (!isCoarsePointer()) inputRef.current?.focus();
   }, [conversationId]);
+
+  // Yazma kutusu içeriğe göre uzar (en fazla max-h).
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [text]);
+
+  useEffect(() => {
+    if (!toast) return undefined;
+    const timer = setTimeout(() => setToast(''), 1600);
+    return () => clearTimeout(timer);
+  }, [toast]);
+
+  const focusInput = () => requestAnimationFrame(() => inputRef.current?.focus());
 
   const removeAttachment = () => {
     const next = new URLSearchParams(searchParams);
@@ -66,32 +139,116 @@ export default function ChatPanel({ conversationId }: { conversationId: string }
     setSearchParams(next, { replace: true });
   };
 
+  const attachNote = (noteId: string) => {
+    setNotePickerOpen(false);
+    const next = new URLSearchParams(searchParams);
+    next.set('note', noteId);
+    setSearchParams(next, { replace: true });
+    focusInput();
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setText('');
+  };
+
   const handleSubmit = async (e: SyntheticEvent) => {
     e.preventDefault();
     const trimmed = text.trim();
-    if (!trimmed || sending) return;
+    if (!trimmed || sending || savingEdit) return;
     setSendError('');
     try {
-      await sendMessage({ id: conversationId, text: trimmed, noteId: attachedNoteId }).unwrap();
+      if (editing) {
+        await editMessage({ id: conversationId, messageId: editing._id, text: trimmed }).unwrap();
+        setEditing(null);
+      } else {
+        await sendMessage({ id: conversationId, text: trimmed, noteId: attachedNoteId, replyTo: replyTo?._id }).unwrap();
+        setReplyTo(null);
+        resetTypingThrottle(conversationId);
+        if (attachedNoteId) removeAttachment();
+      }
       setText('');
-      if (attachedNoteId) removeAttachment();
+      setEmojiOpen(false);
     } catch (err) {
       setSendError(getErrorMessage(err));
     }
   };
 
-  // Enter gönderir, Shift+Enter yeni satır ekler.
+  // Masaüstünde Enter gönderir, Shift+Enter yeni satır. Telefonda Enter yeni satırdır (gönder düğmesi var).
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) handleSubmit(e);
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && !isCoarsePointer()) handleSubmit(e);
+    if (e.key === 'Escape') {
+      if (editing) cancelEdit();
+      else if (replyTo) setReplyTo(null);
+    }
   };
 
-  const handleDeleteMessage = async (messageId: string) => {
-    if (!window.confirm('Unsend this message? It will be removed for both of you.')) return;
-    try {
-      await deleteMessage({ id: conversationId, messageId }).unwrap();
-    } catch (err) {
-      window.alert(getErrorMessage(err));
+  const handleTextChange = (value: string) => {
+    setText(value);
+    if (!editing && value.trim()) sendTyping(conversationId);
+  };
+
+  const insertEmoji = (emoji: string) => {
+    const el = inputRef.current;
+    const start = el?.selectionStart ?? text.length;
+    const end = el?.selectionEnd ?? text.length;
+    setText(text.slice(0, start) + emoji + text.slice(end));
+    requestAnimationFrame(() => {
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(start + emoji.length, start + emoji.length);
+    });
+  };
+
+  const openActions = useCallback((message: DirectMessage, target: HTMLElement) => {
+    navigator.vibrate?.(10);
+    setEmojiOpen(false);
+    setAction({ message, rect: target.getBoundingClientRect() });
+  }, []);
+
+  const closeActions = useCallback(() => setAction(null), []);
+
+  const handleAction = async (kind: MessageAction) => {
+    const message = action?.message;
+    setAction(null);
+    if (!message) return;
+
+    if (kind === 'reply') {
+      setEditing(null);
+      setReplyTo(message);
+      focusInput();
+    } else if (kind === 'copy') {
+      try {
+        await navigator.clipboard.writeText(message.text);
+        setToast('Copied');
+      } catch {
+        setToast("Couldn't copy");
+      }
+    } else if (kind === 'edit') {
+      setReplyTo(null);
+      setEditing(message);
+      setText(message.text);
+      focusInput();
+    } else if (kind === 'delete') {
+      if (!window.confirm('Delete this message? It will be removed for both of you.')) return;
+      try {
+        await deleteMessage({ id: conversationId, messageId: message._id }).unwrap();
+        if (editing?._id === message._id) cancelEdit();
+        if (replyTo?._id === message._id) setReplyTo(null);
+      } catch (err) {
+        window.alert(getErrorMessage(err));
+      }
     }
+  };
+
+  // Alıntıya dokununca asıl mesaja kaydırıp kısa süre vurgular (silinmiş ya da çok eskiyse bir şey olmaz).
+  const jumpToMessage = (messageId: string) => {
+    const el = listRef.current?.querySelector<HTMLElement>(`[data-mid="${messageId}"]`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('message-flash');
+    void el.offsetWidth;
+    el.classList.add('message-flash');
   };
 
   const handleDeleteConversation = async () => {
@@ -105,10 +262,9 @@ export default function ChatPanel({ conversationId }: { conversationId: string }
     }
   };
 
-  if (isLoading) return <Spinner />;
   if (error) {
     return (
-      <div className="p-6">
+      <div className="p-6 pt-[max(env(safe-area-inset-top),1.5rem)]">
         <Alert>{getErrorMessage(error)}</Alert>
         <Link to="/messages" className="btn-secondary mt-4">
           <ArrowLeft size={16} /> Back to messages
@@ -117,6 +273,14 @@ export default function ChatPanel({ conversationId }: { conversationId: string }
     );
   }
 
+  if (isLoading || !conversation) {
+    return (
+      <div className="h-full flex flex-col">
+        <div className="h-16 border-b border-gray-100 pt-safe lg:hidden" />
+        <Spinner />
+      </div>
+    );
+  }
   // Mesaj yazılamayan durumlar (engelleme, silinmiş hesap, doğrulanmamış e-posta).
   const blockedNotice = !other
     ? 'This account no longer exists.'
@@ -127,173 +291,420 @@ export default function ChatPanel({ conversationId }: { conversationId: string }
         : !me?.isVerified
           ? 'Verify your email address to send messages.'
           : null;
+  const canWrite = !blockedNotice;
+
+  const status = typingNow
+    ? 'typing...'
+    : conversation.otherOnline
+      ? 'Active now'
+      : conversation.otherLastActiveAt
+        ? lastSeenLabel(conversation.otherLastActiveAt)
+        : '';
+
+  const authorName = (senderId: string) => (senderId === me?.id ? 'You' : (other?.fullName ?? 'Deleted user'));
 
   return (
-    <div className="flex flex-col h-full min-h-0">
-      {/* Başlık: karşı taraf + menü */}
-      <header className="flex items-center gap-3 px-3 sm:px-4 py-3 border-b border-gray-100">
-        <Link to="/messages" className="lg:hidden p-1.5 -ml-1 rounded-lg text-gray-500 hover:bg-gray-100" aria-label="Back">
-          <ArrowLeft size={18} />
-        </Link>
-        {other ? (
-          <Link to={`/users/${other._id}`} className="flex items-center gap-3 min-w-0 flex-1 group">
-            <UserAvatar user={other} size="md" />
-            <span className="min-w-0">
-              <span className="block text-sm font-semibold text-gray-900 truncate group-hover:text-navy-600">
-                {other.fullName}
-              </span>
-              <span className="block text-xs text-gray-500 truncate">
-                {other.university} · {other.department}
-              </span>
-            </span>
-          </Link>
-        ) : (
-          <span className="flex-1 text-sm font-semibold text-gray-500">Deleted user</span>
-        )}
-
-        <div className="relative shrink-0">
-          <button
-            type="button"
-            onClick={() => setMenuOpen((o) => !o)}
-            aria-expanded={menuOpen}
-            aria-label="Conversation options"
-            className="p-2 rounded-lg text-gray-500 hover:bg-gray-100"
+    <div className="relative flex flex-col h-full min-h-0 bg-white">
+      {/* Başlık: geri, karşı taraf + durum, menü */}
+      <header className="shrink-0 border-b border-gray-100 pt-safe">
+        <div className="flex items-center gap-1 h-16 px-2 lg:px-4">
+          <Link
+            to="/messages"
+            className="lg:hidden w-10 h-10 -ml-0.5 rounded-full flex items-center justify-center text-gray-800 hover:bg-gray-100"
+            aria-label="Back to messages"
           >
-            <MoreVertical size={18} />
-          </button>
-          {menuOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 z-20 w-52 rounded-xl border border-gray-100 bg-white shadow-lg py-1.5">
-                {other && (
-                  <div className="px-4 py-2" onClick={() => setMenuOpen(false)}>
-                    <BlockButton userId={other._id} isBlocked={conversation.blockedByMe} name={other.fullName} />
-                  </div>
+            <ChevronLeft size={26} />
+          </Link>
+          {other ? (
+            <Link to={`/users/${other._id}`} className="flex items-center gap-3 min-w-0 flex-1 pl-1 group">
+              <ChatAvatar user={other} online={conversation.otherOnline} size="md" />
+              <span className="min-w-0">
+                <span className="block text-[17px] font-bold leading-tight text-gray-900 truncate group-hover:text-navy-700">
+                  {other.fullName}
+                </span>
+                {status && (
+                  <span className={`block text-[13px] truncate ${typingNow ? 'text-sky-700 font-medium' : 'text-gray-500'}`}>
+                    {status}
+                  </span>
                 )}
-                <button
-                  type="button"
-                  onClick={handleDeleteConversation}
-                  className="w-full flex items-center gap-1.5 px-4 py-2 text-left text-sm font-medium text-rose-500 hover:bg-rose-50"
-                >
-                  <Trash2 size={14} /> Delete conversation
-                </button>
-              </div>
-            </>
+              </span>
+            </Link>
+          ) : (
+            <span className="flex items-center gap-3 flex-1 pl-1">
+              <ChatAvatar user={null} size="md" />
+              <span className="text-[17px] font-bold text-gray-500">Deleted user</span>
+            </span>
           )}
+
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-expanded={menuOpen}
+              aria-label="Conversation options"
+              className="w-10 h-10 rounded-full flex items-center justify-center text-gray-800 hover:bg-gray-100"
+            >
+              <MoreVertical size={20} />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="sheet-up absolute right-0 top-full mt-1 z-20 w-56 rounded-2xl bg-white shadow-xl ring-1 ring-black/5 py-1.5">
+                  {other && (
+                    <Link
+                      to={`/users/${other._id}`}
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-800 hover:bg-gray-50"
+                    >
+                      <UserRound size={15} /> View profile
+                    </Link>
+                  )}
+                  {other && (
+                    <div className="px-4 py-2" onClick={() => setMenuOpen(false)}>
+                      <BlockButton userId={other._id} isBlocked={conversation.blockedByMe} name={other.fullName} />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleDeleteConversation}
+                    className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50"
+                  >
+                    <Trash2 size={15} /> Delete conversation
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
       {/* Mesajlar */}
-      <div ref={listRef} className="flex-1 overflow-y-auto px-3 sm:px-5 py-4 space-y-3">
+      <div
+        ref={listRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          nearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+        }}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-5 pt-4 pb-3"
+      >
         {!messages?.length ? (
-          <div className="h-full flex flex-col items-center justify-center text-center text-gray-400">
-            <MessagesSquare size={28} />
-            <p className="mt-2 text-sm">No messages yet. Say hi{other ? ` to ${other.fullName.split(' ')[0]}` : ''}!</p>
+          <div className="h-full flex flex-col items-center justify-center text-center">
+            <ChatAvatar user={other ?? null} />
+            <p className="mt-3 font-semibold text-gray-900">{other?.fullName ?? 'Deleted user'}</p>
+            <p className="mt-1 text-sm text-gray-500">
+              No messages yet{other ? `. Say hi to ${other.fullName.split(' ')[0]}!` : '.'}
+            </p>
           </div>
         ) : (
-          messages.map((m) => {
-            const mine = m.sender === me?.id;
-            return (
-              <div key={m._id} className={`group flex ${mine ? 'justify-end' : 'justify-start'}`}>
-                <div className={`min-w-0 max-w-[80%] sm:max-w-[70%] flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
-                  <div className={`flex items-center gap-1 ${mine ? 'flex-row-reverse' : ''}`}>
-                    <div
-                      className={`rounded-2xl px-3.5 py-2 text-sm ${
-                        mine ? 'bg-navy-600 text-white rounded-br-sm' : 'bg-gray-100 text-gray-800 rounded-bl-sm'
-                      }`}
-                    >
-                      {m.note && <NoteAttachment note={m.note} mine={mine} />}
-                      <p className="whitespace-pre-line break-words">{m.text}</p>
+          <div className="min-h-full flex flex-col justify-end">
+            {messages.map((m, i) => {
+              const prev = messages[i - 1];
+              const next = messages[i + 1];
+              const time = new Date(m.createdAt).getTime();
+              const newDay = !prev || !isSameDay(prev.createdAt, m.createdAt);
+              const joinsPrev =
+                !newDay && prev?.sender === m.sender && time - new Date(prev.createdAt).getTime() < GROUP_WINDOW_MS;
+              const joinsNext =
+                next &&
+                next.sender === m.sender &&
+                isSameDay(next.createdAt, m.createdAt) &&
+                new Date(next.createdAt).getTime() - time < GROUP_WINDOW_MS;
+              const mine = m.sender === me?.id;
+              const seen = mine && otherReadAt >= time;
+
+              return (
+                <Fragment key={m._id}>
+                  {newDay && (
+                    <div className="flex justify-center my-4 first:mt-0">
+                      <span className="rounded-full bg-navy-50 px-3 py-1 text-xs font-semibold text-navy-800">
+                        {dayLabel(m.createdAt)}
+                      </span>
                     </div>
-                    {mine && (
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMessage(m._id)}
-                        className="p-1 rounded text-gray-300 opacity-0 group-hover:opacity-100 focus:opacity-100 pointer-coarse:opacity-100 hover:text-rose-500"
-                        aria-label="Unsend message"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    )}
-                  </div>
-                  <span className="mt-0.5 px-1 text-[11px] text-gray-400">{timeAgo(m.createdAt)}</span>
+                  )}
+                  <MessageRow
+                    message={m}
+                    mine={mine}
+                    className={joinsPrev ? 'mt-1' : newDay ? '' : 'mt-3'}
+                    replyAuthor={m.reply ? authorName(m.reply.sender) : undefined}
+                    onQuoteClick={jumpToMessage}
+                    onOpenActions={openActions}
+                  />
+                  {!joinsNext && (
+                    <div
+                      className={`mt-1 flex items-center gap-1 px-1 text-xs text-gray-500 ${mine ? 'justify-end' : 'justify-start'}`}
+                    >
+                      {m.editedAt && <span>Edited ·</span>}
+                      <time dateTime={m.createdAt}>{clockTime(m.createdAt)}</time>
+                      {mine &&
+                        (seen ? (
+                          <CheckCheck size={16} className="text-sky-600" aria-label="Seen" />
+                        ) : (
+                          <Check size={16} className="text-gray-400" aria-label="Sent" />
+                        ))}
+                    </div>
+                  )}
+                </Fragment>
+              );
+            })}
+
+            {typingNow && (
+              <div className="mt-3 flex" aria-label={`${other?.fullName ?? 'They'} is typing`}>
+                <div className="flex items-center gap-1 rounded-[20px] bg-navy-100/70 px-4 py-3.5">
+                  {[0, 1, 2].map((d) => (
+                    <span
+                      key={d}
+                      className="typing-dot w-2 h-2 rounded-full bg-navy-400"
+                      style={{ animationDelay: `${d * 0.18}s` }}
+                    />
+                  ))}
                 </div>
               </div>
-            );
-          })
+            )}
+          </div>
         )}
       </div>
 
-      {/* Yazma kutusu */}
+      {/* Yazma alanı */}
       {blockedNotice ? (
-        <div className="border-t border-gray-100 px-4 py-4 text-center text-sm text-gray-500">
+        <div className="shrink-0 border-t border-gray-100 px-4 pt-4 pb-[max(env(safe-area-inset-bottom),1rem)] text-center text-sm text-gray-500">
           {blockedNotice}
-          {conversation?.blockedByMe && other && (
+          {conversation.blockedByMe && other && (
             <div className="mt-2">
               <BlockButton userId={other._id} isBlocked name={other.fullName} />
             </div>
           )}
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="border-t border-gray-100 p-3 sm:p-4">
+        <form
+          onSubmit={handleSubmit}
+          className="shrink-0 border-t border-gray-100 bg-white px-3 pt-2.5 pb-[max(env(safe-area-inset-bottom),0.75rem)]"
+        >
           <Alert className="mb-2">{sendError}</Alert>
-          {attachedNoteId && (
-            <div className="mb-2 flex items-center gap-2 rounded-lg border border-navy-100 bg-navy-50 px-3 py-2 text-sm">
-              <Paperclip size={15} className="shrink-0 text-navy-600" />
-              <span className="min-w-0 flex-1 truncate text-navy-800">
-                {attachedNote.data?.data?.note?.title ?? (attachedNote.isError ? 'Note unavailable' : 'Loading note...')}
-              </span>
+
+          {(editing || replyTo) && (
+            <ComposerBanner
+              icon={editing ? <Pencil size={16} /> : <Reply size={16} />}
+              title={editing ? 'Editing message' : `Replying to ${authorName(replyTo!.sender)}`}
+              text={(editing ?? replyTo)!.text}
+              onCancel={editing ? cancelEdit : () => setReplyTo(null)}
+              cancelLabel={editing ? 'Cancel editing' : 'Cancel reply'}
+            />
+          )}
+          {attachedNoteId && !editing && (
+            <ComposerBanner
+              icon={<Paperclip size={16} />}
+              title="Attached note"
+              text={attachedNote.data?.data?.note?.title ?? (attachedNote.isError ? 'Note unavailable' : 'Loading note...')}
+              onCancel={removeAttachment}
+              cancelLabel="Remove attached note"
+            />
+          )}
+
+          <div className="flex items-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => setNotePickerOpen(true)}
+              disabled={Boolean(editing)}
+              className="w-11 h-11 shrink-0 rounded-full bg-navy-50 text-navy-800 hover:bg-navy-100 active:bg-navy-100 disabled:opacity-40 flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500"
+              aria-label="Share a note"
+              title="Share a note"
+            >
+              <Plus size={22} />
+            </button>
+
+            <div className="relative flex-1 min-w-0 flex items-end rounded-[22px] border border-gray-300 bg-white focus-within:border-navy-500 focus-within:ring-2 focus-within:ring-navy-500/30">
+              <label htmlFor="dm-message" className="sr-only">
+                Message
+              </label>
+              <textarea
+                id="dm-message"
+                ref={inputRef}
+                rows={1}
+                maxLength={2000}
+                value={text}
+                onChange={(e) => handleTextChange(e.target.value)}
+                onKeyDown={handleKeyDown}
+                placeholder={attachedNoteId ? 'Ask something about this note...' : 'Message'}
+                className="block flex-1 min-w-0 resize-none bg-transparent pl-4 pr-1 py-[10px] text-[15px] leading-6 max-h-32 text-gray-900 placeholder-gray-400 focus:outline-none"
+              />
               <button
                 type="button"
-                onClick={removeAttachment}
-                className="p-0.5 rounded text-navy-400 hover:text-navy-700"
-                aria-label="Remove attached note"
+                onClick={() => setEmojiOpen((o) => !o)}
+                aria-expanded={emojiOpen}
+                aria-label="Insert emoji"
+                className="shrink-0 w-11 h-11 rounded-full flex items-center justify-center text-gray-500 hover:text-navy-700 focus:outline-none focus-visible:text-navy-700"
               >
-                <X size={15} />
+                <Smile size={21} />
               </button>
+
+              {emojiOpen && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setEmojiOpen(false)} />
+                  <div className="sheet-up absolute bottom-full right-0 mb-2 z-20 w-[min(296px,calc(100vw-1.5rem))] rounded-2xl bg-white p-2 shadow-xl ring-1 ring-black/5 grid grid-cols-7 gap-0.5">
+                    {EMOJIS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        onClick={() => insertEmoji(emoji)}
+                        className="h-10 rounded-lg text-[22px] hover:bg-gray-100 active:bg-gray-100"
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-          )}
-          <div className="flex items-end gap-2">
-            <label htmlFor="dm-message" className="sr-only">
-              Message
-            </label>
-            <textarea
-              id="dm-message"
-              ref={inputRef}
-              rows={1}
-              maxLength={2000}
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={attachedNoteId ? 'Ask something about this note...' : 'Write a message...'}
-              className="form-input resize-none max-h-32"
-            />
-            <button type="submit" disabled={sending || !text.trim()} className="btn-primary px-3.5 shrink-0" aria-label="Send">
-              <SendHorizontal size={17} />
+
+            <button
+              type="submit"
+              disabled={sending || savingEdit || !text.trim()}
+              className="w-11 h-11 shrink-0 rounded-full bg-navy-800 text-white hover:bg-navy-900 disabled:bg-navy-800/80 disabled:opacity-70 flex items-center justify-center transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500 focus-visible:ring-offset-2"
+              aria-label={editing ? 'Save edit' : 'Send'}
+            >
+              {editing ? <Check size={20} strokeWidth={2.5} /> : <ArrowUp size={20} strokeWidth={2.5} />}
             </button>
           </div>
         </form>
       )}
+
+      {toast && (
+        <div
+          role="status"
+          className="sheet-up pointer-events-none absolute left-1/2 bottom-24 -translate-x-1/2 rounded-full bg-gray-900/90 px-4 py-2 text-sm font-medium text-white shadow-lg"
+        >
+          {toast}
+        </div>
+      )}
+
+      {action && (
+        <MessageActionMenu
+          rect={action.rect}
+          mine={action.message.sender === me?.id}
+          bubble={
+            <MessageBubble
+              message={action.message}
+              mine={action.message.sender === me?.id}
+              replyAuthor={action.message.reply ? authorName(action.message.reply.sender) : undefined}
+              inert
+            />
+          }
+          canEdit={canWrite && action.message.sender === me?.id}
+          canDelete={action.message.sender === me?.id}
+          onAction={handleAction}
+          onClose={closeActions}
+        />
+      )}
+
+      {notePickerOpen && <NotePickerSheet onPick={attachNote} onClose={() => setNotePickerOpen(false)} />}
     </div>
   );
 }
 
-// Mesaja eklenmiş not kartı (tıklayınca not sayfası açılır).
-function NoteAttachment({ note, mine }: { note: MessageNote; mine: boolean }) {
+interface MessageRowProps {
+  message: DirectMessage;
+  mine: boolean;
+  className: string;
+  replyAuthor?: string;
+  onQuoteClick: (messageId: string) => void;
+  onOpenActions: (message: DirectMessage, bubble: HTMLElement) => void;
+}
+
+// Bir mesaj satırı. Telefonda basılı tutunca, masaüstünde sağ tıklayınca ya da "⋯" ile işlem menüsü açılır.
+function MessageRow({ message, mine, className, replyAuthor, onQuoteClick, onOpenActions }: MessageRowProps) {
+  const bubbleRef = useRef<HTMLDivElement>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const start = useRef({ x: 0, y: 0 });
+  // Basılı tutma menüyü açtıysa parmak kalkınca gelen tıklama (bağlantı/alıntı) yok sayılır.
+  const longPressed = useRef(false);
+
+  const cancel = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  useEffect(() => cancel, []);
+
+  const open = () => {
+    if (bubbleRef.current) onOpenActions(message, bubbleRef.current);
+  };
+
+  const onPointerDown = (e: ReactPointerEvent) => {
+    longPressed.current = false;
+    if (e.pointerType === 'mouse') return;
+    start.current = { x: e.clientX, y: e.clientY };
+    cancel();
+    timer.current = setTimeout(() => {
+      longPressed.current = true;
+      open();
+    }, LONG_PRESS_MS);
+  };
+
+  const onPointerMove = (e: ReactPointerEvent) => {
+    if (timer.current && Math.hypot(e.clientX - start.current.x, e.clientY - start.current.y) > 10) cancel();
+  };
+
   return (
-    <Link
-      to={`/notes/${note._id}`}
-      className={`mb-2 flex items-center gap-2.5 rounded-xl px-3 py-2 transition-colors ${
-        mine ? 'bg-white/15 hover:bg-white/25' : 'bg-white hover:bg-navy-50 border border-gray-200'
-      }`}
-    >
-      <FileText size={18} className={mine ? 'text-white' : 'text-navy-600'} />
-      <span className="min-w-0">
-        <span className={`block truncate text-sm font-semibold ${mine ? 'text-white' : 'text-gray-900'}`}>{note.title}</span>
-        <span className={`block truncate text-xs ${mine ? 'text-white/70' : 'text-gray-500'}`}>
-          {[note.courseCode, note.courseName].filter(Boolean).join(' · ')}
-        </span>
+    <div data-mid={message._id} className={`group -mx-2 px-2 rounded-2xl flex items-center gap-1 ${mine ? 'flex-row-reverse' : ''} ${className}`}>
+      <div
+        ref={bubbleRef}
+        className="min-w-0 max-w-[80%] sm:max-w-[70%] lg:max-w-[65%] pointer-coarse:select-none [-webkit-touch-callout:none]"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={cancel}
+        onPointerCancel={cancel}
+        onPointerLeave={cancel}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          cancel();
+          if (!longPressed.current) open();
+          longPressed.current = true;
+        }}
+        onClickCapture={(e) => {
+          if (longPressed.current) {
+            e.preventDefault();
+            e.stopPropagation();
+            longPressed.current = false;
+          }
+        }}
+      >
+        <MessageBubble message={message} mine={mine} replyAuthor={replyAuthor} onQuoteClick={onQuoteClick} />
+      </div>
+      <button
+        type="button"
+        onClick={open}
+        className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:bg-gray-100 hover:text-gray-700 opacity-0 group-hover:opacity-100 focus:opacity-100 pointer-coarse:hidden"
+        aria-label="Message actions"
+      >
+        <MoreHorizontal size={18} />
+      </button>
+    </div>
+  );
+}
+
+interface ComposerBannerProps {
+  icon: ReactNode;
+  title: string;
+  text: string;
+  onCancel: () => void;
+  cancelLabel: string;
+}
+
+// Yazma kutusunun üstündeki şerit: yanıtlanan / düzenlenen mesaj ya da eklenen not.
+function ComposerBanner({ icon, title, text, onCancel, cancelLabel }: ComposerBannerProps) {
+  return (
+    <div className="mb-2 flex items-center gap-3 rounded-2xl bg-navy-50 pl-3.5 pr-1.5 py-2">
+      <span className="shrink-0 text-navy-700">{icon}</span>
+      <span className="min-w-0 flex-1 border-l-2 border-navy-300 pl-3">
+        <span className="block text-xs font-bold text-navy-800">{title}</span>
+        <span className="block truncate text-[13px] text-gray-600">{text}</span>
       </span>
-    </Link>
+      <button
+        type="button"
+        onClick={onCancel}
+        className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-navy-500 hover:bg-navy-100 hover:text-navy-800"
+        aria-label={cancelLabel}
+      >
+        <X size={17} />
+      </button>
+    </div>
   );
 }

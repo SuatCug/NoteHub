@@ -43,7 +43,8 @@ export default function NoteDetailPage() {
   const { id = '' } = useParams();
   const navigate = useNavigate();
   const { token, user } = useAppSelector((state) => state.auth);
-  const { data, isLoading, error } = useGetNoteQuery(id);
+  // Başkalarının beğeni/yorumları önbellekte görünmez; detay sayfası her açılışta tazelenir.
+  const { data, isLoading, error } = useGetNoteQuery(id, { refetchOnMountOrArgChange: true });
   const [toggleLike] = useToggleLikeMutation();
   const [deleteNote, { isLoading: deleting }] = useDeleteNoteMutation();
   const [registerDownload] = useRegisterDownloadMutation();

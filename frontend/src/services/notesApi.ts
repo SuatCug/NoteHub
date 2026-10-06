@@ -44,8 +44,6 @@ export const notesApi = baseApi.injectEndpoints({
     getNote: builder.query<NoteResponse, string>({
       query: (id) => `/notes/${id}`,
       providesTags: (_result, _error, id) => [{ type: 'Note', id }],
-      // Başkalarının beğeni/yorumları önbellekte görünmez; detay sayfası her açılışta tazelenir.
-      refetchOnMountOrArgChange: true,
     }),
     createNote: builder.mutation<NoteResponse, FormData>({
       // body: FormData (dosya alanı "file")

@@ -190,10 +190,13 @@ export interface GroupMessage {
 export interface ConversationSummary {
   _id: ID;
   otherUser: UserCard | null;
+  isOnline: boolean;
   lastMessage: {
     text: string;
     hasNote: boolean;
     isMine: boolean;
+    // Benim gönderdiğim son mesajı karşı taraf gördü mü?
+    isRead: boolean;
     createdAt: ISODate;
   };
   unreadCount: number;
@@ -212,6 +215,9 @@ export interface DirectMessage {
   sender: ID;
   text: string;
   note: MessageNote | null;
+  // Yanıtlanan mesajın gönderildiği andaki özeti.
+  reply: { message: ID; sender: ID; text: string } | null;
+  editedAt: ISODate | null;
   createdAt: ISODate;
 }
 
@@ -221,6 +227,9 @@ export interface ConversationDetail {
     otherUser: UserCard | null;
     blockedByMe: boolean;
     blockedMe: boolean;
+    otherOnline: boolean;
+    otherLastActiveAt: ISODate | null;
+    otherLastReadAt: ISODate | null;
   };
   messages: DirectMessage[];
   markedRead: boolean;

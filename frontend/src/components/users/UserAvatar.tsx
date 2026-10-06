@@ -4,6 +4,7 @@ const SIZES = {
   xs: 'w-6 h-6 text-[10px]',
   sm: 'w-8 h-8 text-xs',
   md: 'w-10 h-10 text-sm',
+  chat: 'w-[52px] h-[52px] text-base',
   lg: 'w-16 h-16 text-xl',
   xl: 'w-24 h-24 text-3xl',
   card: 'w-[88px] h-[88px] text-2xl',

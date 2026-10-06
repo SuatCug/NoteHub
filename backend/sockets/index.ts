@@ -1,7 +1,9 @@
 import type { Server as HttpServer } from 'node:http';
 import { Server } from 'socket.io';
 import { verifyToken } from '../utils/jwt.util.ts';
-import { User, Group } from '../models/index.ts';
+import mongoose from 'mongoose';
+import { User, Group, Conversation } from '../models/index.ts';
+import { isBlockedBetween } from '../services/block.service.ts';
 import * as realtime from '../services/realtime.service.ts';
 
 // Kullanıcıyı takip edenlere "çevrimiçi durumu değişti" bildirimi: istemciler "Active now" listesini yeniler
@@ -9,6 +11,13 @@ import * as realtime from '../services/realtime.service.ts';
 const broadcastPresence = async (userId: string) => {
   const user = await User.findById(userId).select('followers').lean();
   if (user?.followers?.length) realtime.emitToUsers(user.followers, 'presence:changed', { userId });
+
+  // Mesajlaştığı kişiler de sohbet başlığındaki "Active now" durumunu yeniler.
+  const conversations = await Conversation.find({ participants: userId, lastMessageAt: { $ne: null } })
+    .select('participants')
+    .lean();
+  const partners = conversations.flatMap((c) => c.participants.filter((id) => !id.equals(userId)));
+  if (partners.length) realtime.emitToUsers(partners, 'dm:presence', { userId });
 };
 
 const touchActivity = (userId: string) =>
@@ -56,6 +65,20 @@ const initSocket = (httpServer: HttpServer, allowedOrigins: string[] | undefined
 
     socket.on('group:leave', (groupId) => {
       socket.leave(realtime.groupRoom(String(groupId)));
+    });
+
+    // "Yazıyor..." sinyali: sadece konuşmanın diğer katılımcısına iletilir (engelleme varsa iletilmez).
+    socket.on('dm:typing', async (conversationId) => {
+      try {
+        if (!mongoose.isValidObjectId(conversationId)) return;
+        const conversation = await Conversation.findById(conversationId).select('participants').lean();
+        if (!conversation?.participants.some((id) => id.equals(userId))) return;
+        const otherId = conversation.participants.find((id) => !id.equals(userId));
+        if (!otherId || (await isBlockedBetween(userId, otherId))) return;
+        realtime.emitToUsers(otherId, 'dm:typing', { conversationId: String(conversationId), userId });
+      } catch {
+        // Yazıyor sinyali kritik değil; hata sessizce yok sayılır.
+      }
     });
 
     socket.on('disconnect', () => {

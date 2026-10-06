@@ -47,6 +47,8 @@ const removeConnection = (userId: string) => {
 
 const getOnlineUserIds = () => [...connections.keys()];
 
+const isOnline = (userId: IdLike) => connections.has(String(userId));
+
 export {
   setIo,
   userRoom,
@@ -56,4 +58,5 @@ export {
   addConnection,
   removeConnection,
   getOnlineUserIds,
+  isOnline,
 };

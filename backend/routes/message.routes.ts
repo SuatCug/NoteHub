@@ -5,7 +5,7 @@ import requireVerified from '../middlewares/verified.middleware.ts';
 import validate from '../middlewares/validate.middleware.ts';
 import rateLimit from '../middlewares/rateLimit.middleware.ts';
 import { idParamRules } from '../validations/common.validation.ts';
-import { startConversationRules, sendMessageRules, messageParamRules } from '../validations/message.validation.ts';
+import { startConversationRules, sendMessageRules, editMessageRules, messageParamRules } from '../validations/message.validation.ts';
 
 const router = Router();
 
@@ -30,6 +30,16 @@ router.post(
   requireVerified,
   messageLimit,
   messageController.sendMessage
+);
+router.patch(
+  '/conversations/:id/messages/:messageId',
+  idParamRules,
+  messageParamRules,
+  editMessageRules,
+  validate,
+  requireVerified,
+  messageLimit,
+  messageController.editMessage
 );
 router.delete(
   '/conversations/:id/messages/:messageId',

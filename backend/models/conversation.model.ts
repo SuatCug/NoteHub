@@ -16,6 +16,8 @@ const conversationSchema = new Schema(
     lastMessageAt: { type: Date, index: true },
     // Kullanıcı id'si -> okunmamış mesaj sayısı.
     unreadCounts: { type: Map, of: Number, default: {} },
+    // Kullanıcı id'si -> konuşmayı en son okuduğu an (karşı tarafın "görüldü" işaretleri için).
+    lastReadAt: { type: Map, of: Date, default: {} },
     // Kullanıcı id'si -> konuşmayı kendi tarafında sildiği an. Bu andan önceki mesajları o kullanıcı görmez;
     // yeni mesaj gelince konuşma listesinde tekrar belirir.
     clearedAt: { type: Map, of: Date, default: {} },
