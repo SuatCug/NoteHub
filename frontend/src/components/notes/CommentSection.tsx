@@ -4,6 +4,7 @@ import { useAppSelector } from '@/app/hooks';
 import { Send, Trash2 } from 'lucide-react';
 import Alert from '@/components/common/Alert';
 import UserAvatar from '@/components/users/UserAvatar';
+import { useDialog } from '@/components/common/DialogProvider';
 import { useAddCommentMutation, useDeleteCommentMutation } from '@/services/notesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
 import { timeAgo } from '@/lib/format';
@@ -15,6 +16,7 @@ export default function CommentSection({ note }: { note: NoteDetail }) {
   const [deleteComment] = useDeleteCommentMutation();
   const [text, setText] = useState('');
   const [error, setError] = useState('');
+  const dialog = useDialog();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -28,7 +30,14 @@ export default function CommentSection({ note }: { note: NoteDetail }) {
   };
 
   const handleDelete = async (commentId: string) => {
-    if (!window.confirm('Are you sure you want to delete this comment?')) return;
+    const ok = await dialog.confirm({
+      title: 'Delete this comment?',
+      message: "The comment will be removed for everyone. This can't be undone.",
+      confirmLabel: 'Delete',
+      tone: 'danger',
+      icon: Trash2,
+    });
+    if (!ok) return;
     try {
       await deleteComment({ id: note._id, commentId }).unwrap();
     } catch (err) {

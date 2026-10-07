@@ -43,7 +43,7 @@ export default function ProfileSidebar({ profile }: { profile: ProfileData }) {
         ) : (
           !isBlocked && (
             <div className="grid grid-cols-2 gap-2">
-              <FollowButton userId={user.id} isFollowing={isFollowing} />
+              <FollowButton userId={user.id} isFollowing={isFollowing} name={user.fullName} />
               <MessageButton userId={user.id} />
             </div>
           )

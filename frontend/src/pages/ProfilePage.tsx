@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useAppSelector } from '@/app/hooks';
-import { ArrowRight, Pencil, Upload } from 'lucide-react';
+import { ArrowRight, Ban, Check, Link as LinkIcon, MoreHorizontal, Pencil, Upload } from 'lucide-react';
 import PageLayout from '@/components/layout/PageLayout';
 import Spinner from '@/components/common/Spinner';
 import EmptyState from '@/components/common/EmptyState';
@@ -71,16 +72,37 @@ export default function ProfilePage() {
                 <Pencil size={15} /> Edit Profile
               </Link>
             ) : (
-              <div className="flex flex-col items-stretch sm:items-end gap-2">
-                <div className="flex gap-2">
-                  {!isBlocked && <FollowButton userId={user.id} isFollowing={isFollowing} />}
-                  {!isBlocked && <MessageButton userId={user.id} />}
-                </div>
-                {token && <BlockButton userId={user.id} isBlocked={isBlocked} name={user.fullName} />}
+              // Telefonda Follow / Message satırı tam genişlik kaplar, "⋯" sağda sabit kalır.
+              <div className="flex items-center justify-end gap-2">
+                {!isBlocked && (
+                  <div className="grid flex-1 grid-cols-2 gap-2 sm:flex sm:flex-none">
+                    <FollowButton userId={user.id} isFollowing={isFollowing} name={user.fullName} />
+                    <MessageButton userId={user.id} />
+                  </div>
+                )}
+                {token && <ProfileMenu userId={user.id} name={user.fullName} isBlocked={isBlocked} />}
               </div>
             )}
           </div>
         </div>
+
+        {isBlocked && !isMe && (
+          // Telefonda ikon + yazı üstte, "Unblock" altta tam genişlik; geniş ekranda hepsi tek satır.
+          <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-rose-100 bg-rose-50/70 px-4 py-3.5">
+            <div className="flex min-w-0 flex-1 items-start sm:items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600">
+                <Ban size={17} />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900 break-words">You blocked {user.fullName}</p>
+                <p className="text-[13px] text-gray-600">
+                  You can't follow or message each other. Unblock to interact again.
+                </p>
+              </div>
+            </div>
+            <BlockButton userId={user.id} isBlocked name={user.fullName} variant="button" className="w-full sm:w-auto shrink-0" />
+          </div>
+        )}
 
         <dl className="mt-6 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           <ProfileStat label="Notes" value={stats.notesCount} />
@@ -152,6 +174,56 @@ export default function ProfilePage() {
         )}
       </div>
     </PageLayout>
+  );
+}
+
+// Başka birinin profilindeki "⋯" menüsü: profil bağlantısını kopyala, engelle / engeli kaldır.
+function ProfileMenu({ userId, name, isBlocked }: { userId: string; name: string; isBlocked: boolean }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(`${window.location.origin}/users/${userId}`);
+      setCopied(true);
+      setTimeout(() => {
+        setCopied(false);
+        setOpen(false);
+      }, 1000);
+    } catch {
+      setOpen(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        aria-label="More options"
+        className="btn-secondary px-2.5"
+      >
+        <MoreHorizontal size={18} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="sheet-up absolute right-0 top-full mt-1.5 z-20 w-60 rounded-2xl bg-white shadow-xl ring-1 ring-black/5 py-1.5">
+            <button
+              type="button"
+              onClick={copyLink}
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-gray-800 hover:bg-gray-50"
+            >
+              {copied ? <Check size={15} className="text-emerald-600" /> : <LinkIcon size={15} />}
+              {copied ? 'Link copied' : 'Copy profile link'}
+            </button>
+            <div className="my-1 border-t border-gray-100" />
+            <BlockButton userId={userId} isBlocked={isBlocked} name={name} variant="menu" onDone={() => setOpen(false)} />
+          </div>
+        </>
+      )}
+    </div>
   );
 }
 

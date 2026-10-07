@@ -3,6 +3,7 @@ import { useAppSelector } from '@/app/hooks';
 import { MessageCircle } from 'lucide-react';
 import { useStartConversationMutation } from '@/services/messagesApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import { useDialog } from '@/components/common/DialogProvider';
 
 // Kullanıcıyla konuşmayı açıp mesajlar sayfasına götürür. noteId verilirse ("Ask the author")
 // not, ilk mesaja eklenmek üzere mesaj kutusuna iliştirilir.
@@ -18,6 +19,7 @@ export default function MessageButton({ userId, noteId, label = 'Message', class
   const isVerified = useAppSelector((state) => state.auth.user?.isVerified);
   const navigate = useNavigate();
   const [startConversation, { isLoading }] = useStartConversationMutation();
+  const dialog = useDialog();
 
   const handleClick = async () => {
     if (!token) return navigate('/login');
@@ -25,7 +27,7 @@ export default function MessageButton({ userId, noteId, label = 'Message', class
       const { data } = await startConversation(userId).unwrap();
       navigate(`/messages/${data.conversationId}${noteId ? `?note=${noteId}` : ''}`);
     } catch (err) {
-      window.alert(getErrorMessage(err));
+      dialog.alert({ message: getErrorMessage(err) });
     }
   };
 

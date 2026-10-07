@@ -35,6 +35,7 @@ import MessageBubble from './MessageBubble';
 import MessageActionMenu, { type MessageAction } from './MessageActionMenu';
 import NotePickerSheet from './NotePickerSheet';
 import BlockButton from '@/components/users/BlockButton';
+import { useDialog } from '@/components/common/DialogProvider';
 import Spinner from '@/components/common/Spinner';
 import Alert from '@/components/common/Alert';
 import {
@@ -94,6 +95,7 @@ export default function ChatPanel({ conversationId }: { conversationId: string }
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nearBottomRef = useRef(true);
+  const dialog = useDialog();
 
   const conversation = data?.data?.conversation;
   const messages = data?.data?.messages;
@@ -230,13 +232,20 @@ export default function ChatPanel({ conversationId }: { conversationId: string }
       setText(message.text);
       focusInput();
     } else if (kind === 'delete') {
-      if (!window.confirm('Delete this message? It will be removed for both of you.')) return;
+      const ok = await dialog.confirm({
+        title: 'Delete this message?',
+        message: 'It will be removed for both of you.',
+        confirmLabel: 'Delete',
+        tone: 'danger',
+        icon: Trash2,
+      });
+      if (!ok) return;
       try {
         await deleteMessage({ id: conversationId, messageId: message._id }).unwrap();
         if (editing?._id === message._id) cancelEdit();
         if (replyTo?._id === message._id) setReplyTo(null);
       } catch (err) {
-        window.alert(getErrorMessage(err));
+        dialog.alert({ message: getErrorMessage(err) });
       }
     }
   };
@@ -253,12 +262,19 @@ export default function ChatPanel({ conversationId }: { conversationId: string }
 
   const handleDeleteConversation = async () => {
     setMenuOpen(false);
-    if (!window.confirm('Delete this conversation? It will only be removed for you.')) return;
+    const ok = await dialog.confirm({
+      title: 'Delete this conversation?',
+      message: 'It will only be removed for you. The other person will still see it.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+      icon: Trash2,
+    });
+    if (!ok) return;
     try {
       await deleteConversation(conversationId).unwrap();
       navigate('/messages');
     } catch (err) {
-      window.alert(getErrorMessage(err));
+      dialog.alert({ message: getErrorMessage(err) });
     }
   };
 
@@ -359,9 +375,13 @@ export default function ChatPanel({ conversationId }: { conversationId: string }
                     </Link>
                   )}
                   {other && (
-                    <div className="px-4 py-2" onClick={() => setMenuOpen(false)}>
-                      <BlockButton userId={other._id} isBlocked={conversation.blockedByMe} name={other.fullName} />
-                    </div>
+                    <BlockButton
+                      userId={other._id}
+                      isBlocked={conversation.blockedByMe}
+                      name={other.fullName}
+                      variant="menu"
+                      onDone={() => setMenuOpen(false)}
+                    />
                   )}
                   <button
                     type="button"

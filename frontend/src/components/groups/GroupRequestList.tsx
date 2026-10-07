@@ -5,12 +5,14 @@ import EmptyState from '@/components/common/EmptyState';
 import Spinner from '@/components/common/Spinner';
 import { useGetJoinRequestsQuery, useRespondJoinRequestMutation } from '@/services/groupsApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import { useDialog } from '@/components/common/DialogProvider';
 
 // Özel grubun bekleyen katılma istekleri (sadece kurucuya gösterilir).
 export default function GroupRequestList({ groupId }: { groupId: string }) {
   const { data, isLoading } = useGetJoinRequestsQuery(groupId);
   const [respond, { isLoading: responding }] = useRespondJoinRequestMutation();
   const users = data?.data?.users;
+  const dialog = useDialog();
 
   if (isLoading) return <Spinner />;
   if (!users?.length) {
@@ -21,7 +23,7 @@ export default function GroupRequestList({ groupId }: { groupId: string }) {
     try {
       await respond({ id: groupId, userId, approve }).unwrap();
     } catch (err) {
-      window.alert(getErrorMessage(err));
+      dialog.alert({ message: getErrorMessage(err) });
     }
   };
 

@@ -5,6 +5,7 @@ import EmptyState from '@/components/common/EmptyState';
 import Spinner from '@/components/common/Spinner';
 import { useRemoveGroupMemberMutation, useTransferGroupOwnershipMutation } from '@/services/groupsApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import { useDialog, type ConfirmOptions } from '@/components/common/DialogProvider';
 import type { UserCard } from '@/types/api';
 
 interface GroupMemberListProps {
@@ -19,16 +20,17 @@ export default function GroupMemberList({ groupId, users, isLoading, canManage }
   const [removeMember, { isLoading: removing }] = useRemoveGroupMemberMutation();
   const [transferOwnership, { isLoading: transferring }] = useTransferGroupOwnershipMutation();
   const busy = removing || transferring;
+  const dialog = useDialog();
 
   if (isLoading) return <Spinner />;
   if (!users?.length) return <EmptyState icon={Users} title="No members yet" />;
 
-  const run = async (action: () => { unwrap: () => Promise<unknown> }, message: string) => {
-    if (!window.confirm(message)) return;
+  const run = async (action: () => { unwrap: () => Promise<unknown> }, options: ConfirmOptions) => {
+    if (!(await dialog.confirm(options))) return;
     try {
       await action().unwrap();
     } catch (err) {
-      window.alert(getErrorMessage(err));
+      dialog.alert({ message: getErrorMessage(err) });
     }
   };
 
@@ -61,7 +63,12 @@ export default function GroupMemberList({ groupId, users, isLoading, canManage }
                 onClick={() =>
                   run(
                     () => transferOwnership({ id: groupId, userId: u._id }),
-                    `Make ${u.fullName} the founder? You will stay in the group as a regular member.`
+                    {
+                      title: `Make ${u.fullName} the founder?`,
+                      message: 'They will manage the group. You will stay in it as a regular member.',
+                      confirmLabel: 'Make founder',
+                      icon: Crown,
+                    }
                   )
                 }
                 className="p-2 rounded-md text-gray-400 hover:text-amber-600 hover:bg-amber-50"
@@ -73,7 +80,15 @@ export default function GroupMemberList({ groupId, users, isLoading, canManage }
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => run(() => removeMember({ id: groupId, userId: u._id }), `Remove ${u.fullName} from the group?`)}
+                onClick={() =>
+                  run(() => removeMember({ id: groupId, userId: u._id }), {
+                    title: `Remove ${u.fullName}?`,
+                    message: 'They will no longer be a member of this group.',
+                    confirmLabel: 'Remove',
+                    tone: 'danger',
+                    icon: UserMinus,
+                  })
+                }
                 className="p-2 rounded-md text-gray-400 hover:text-rose-600 hover:bg-rose-50"
                 title="Remove from group"
                 aria-label={`Remove ${u.fullName} from the group`}

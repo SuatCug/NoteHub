@@ -5,6 +5,7 @@ import { MessagesSquare, SendHorizontal, Trash2 } from 'lucide-react';
 import UserAvatar from '@/components/users/UserAvatar';
 import Spinner from '@/components/common/Spinner';
 import Alert from '@/components/common/Alert';
+import { useDialog } from '@/components/common/DialogProvider';
 import {
   useDeleteGroupMessageMutation,
   useGetGroupMessagesQuery,
@@ -29,6 +30,7 @@ export default function GroupChat({ groupId, isOwner }: { groupId: string; isOwn
   const [text, setText] = useState('');
   const [sendError, setSendError] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
+  const dialog = useDialog();
 
   // Sohbet açıkken grubun socket odasına katılınır; yeni mesaj olayı gelince liste yenilenir (bkz. RealtimeBridge).
   useEffect(() => {
@@ -64,11 +66,18 @@ export default function GroupChat({ groupId, isOwner }: { groupId: string; isOwn
   };
 
   const handleDelete = async (messageId: string) => {
-    if (!window.confirm('Delete this message?')) return;
+    const ok = await dialog.confirm({
+      title: 'Delete this message?',
+      message: 'It will be removed from the group chat for everyone.',
+      confirmLabel: 'Delete',
+      tone: 'danger',
+      icon: Trash2,
+    });
+    if (!ok) return;
     try {
       await deleteMessage({ id: groupId, messageId }).unwrap();
     } catch (err) {
-      window.alert(getErrorMessage(err));
+      dialog.alert({ message: getErrorMessage(err) });
     }
   };
 

@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAppSelector } from '@/app/hooks';
 import { Bookmark, Compass, FileUp, Flame, Loader2, UserPlus, type LucideIcon } from 'lucide-react';
@@ -44,6 +44,11 @@ export default function SocialHome() {
   const exploring = [...searchParams.keys()].some((k) => k !== 'tab');
   const tabParam = searchParams.get('tab');
   const tab = isFeedTab(tabParam) ? tabParam : 'all';
+
+  // Akış ↔ Explore geçişinde adres yolu (/) değişmediği için ScrollToTop çalışmaz: sayfa başına burada dönülür.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [exploring]);
 
   return (
     <PageLayout>

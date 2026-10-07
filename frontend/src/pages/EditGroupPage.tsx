@@ -8,6 +8,7 @@ import Alert from '@/components/common/Alert';
 import EmptyState from '@/components/common/EmptyState';
 import { useDeleteGroupMutation, useGetGroupQuery, useUpdateGroupMutation } from '@/services/groupsApi';
 import { getErrorMessage } from '@/lib/getErrorMessage';
+import { useDialog } from '@/components/common/DialogProvider';
 import type { GroupInput } from '@/types/api';
 
 export default function EditGroupPage() {
@@ -18,6 +19,7 @@ export default function EditGroupPage() {
   const [deleteGroup, { isLoading: deleting }] = useDeleteGroupMutation();
   const [error, setError] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const dialog = useDialog();
 
   if (isLoading) return <PageLayout><Spinner /></PageLayout>;
   if (loadError || !data) {
@@ -42,7 +44,14 @@ export default function EditGroupPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Delete this group permanently? Notes shared in it will stay on their authors\' profiles.')) return;
+    const ok = await dialog.confirm({
+      title: `Delete "${group.name}"?`,
+      message: "This group will be deleted permanently. Notes shared in it will stay on their authors' profiles.",
+      confirmLabel: 'Delete group',
+      tone: 'danger',
+      icon: Trash2,
+    });
+    if (!ok) return;
     setDeleteError('');
     try {
       await deleteGroup(id).unwrap();

@@ -13,6 +13,7 @@ import CommentSection from '@/components/notes/CommentSection';
 import LikesModal from '@/components/notes/LikesModal';
 import UserAvatar from '@/components/users/UserAvatar';
 import MessageButton from '@/components/messages/MessageButton';
+import { useDialog } from '@/components/common/DialogProvider';
 import {
   useDeleteNoteMutation,
   useGetNoteQuery,
@@ -51,6 +52,7 @@ export default function NoteDetailPage() {
   const [downloading, setDownloading] = useState(false);
   const [actionError, setActionError] = useState('');
   const [showLikes, setShowLikes] = useState(false);
+  const dialog = useDialog();
 
   if (isLoading) return <PageLayout><Spinner /></PageLayout>;
   if (error || !data) {
@@ -111,7 +113,14 @@ export default function NoteDetailPage() {
   };
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to permanently delete this note?')) return;
+    const ok = await dialog.confirm({
+      title: 'Delete this note?',
+      message: `"${note.title}" will be permanently deleted along with its likes and comments. This can't be undone.`,
+      confirmLabel: 'Delete note',
+      tone: 'danger',
+      icon: Trash2,
+    });
+    if (!ok) return;
     try {
       await deleteNote(note._id).unwrap();
       navigate(user ? `/users/${user.id}` : '/', { replace: true });

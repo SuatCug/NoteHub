@@ -86,10 +86,27 @@ body {
 .sheet-up {
   animation: sheet-up 0.16s ease-out both;
 }
+/* Onay / uyarı penceresi (DialogProvider) */
+@keyframes dialog-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes dialog-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.dialog-in {
+  animation: dialog-in 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+.dialog-backdrop {
+  animation: dialog-backdrop 0.15s ease-out both;
+}
 @media (prefers-reduced-motion: reduce) {
   .typing-dot,
   .message-flash,
-  .sheet-up {
+  .sheet-up,
+  .dialog-in,
+  .dialog-backdrop {
     animation: none;
   }
 }

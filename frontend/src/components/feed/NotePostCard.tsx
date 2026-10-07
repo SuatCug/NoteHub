@@ -6,6 +6,7 @@ import FileTypeBadge from '@/components/notes/FileTypeBadge';
 import VisibilityBadge from '@/components/notes/VisibilityBadge';
 import UserAvatar from '@/components/users/UserAvatar';
 import LikesModal from '@/components/notes/LikesModal';
+import { useDialog } from '@/components/common/DialogProvider';
 import { useRegisterDownloadMutation, useToggleLikeMutation, useToggleSaveMutation } from '@/services/notesApi';
 import { downloadNote } from '@/lib/downloadNote';
 import { getErrorMessage } from '@/lib/getErrorMessage';
@@ -26,6 +27,7 @@ export default function NotePostCard({ note, index = 0 }: { note: NoteCard; inde
   const [toggleLike] = useToggleLikeMutation();
   const [toggleSave] = useToggleSaveMutation();
   const [registerDownload] = useRegisterDownloadMutation();
+  const dialog = useDialog();
 
   // Beğeni/kaydet anında görünsün diye yerel (iyimser) durum; liste yenilenip yeni not gelince sıfırlanır.
   const [optimistic, setOptimistic] = useState<OptimisticState | null>(null);
@@ -52,7 +54,7 @@ export default function NotePostCard({ note, index = 0 }: { note: NoteCard; inde
       await toggleLike({ id: note._id, liked: isLiked }).unwrap();
     } catch (err) {
       setOptimistic((o) => ({ ...o, isLiked, likesCount }));
-      window.alert(getErrorMessage(err));
+      dialog.alert({ message: getErrorMessage(err) });
     }
   };
 
@@ -62,7 +64,7 @@ export default function NotePostCard({ note, index = 0 }: { note: NoteCard; inde
       await toggleSave({ id: note._id, saved: isSaved }).unwrap();
     } catch (err) {
       setOptimistic((o) => ({ ...o, isSaved }));
-      window.alert(getErrorMessage(err));
+      dialog.alert({ message: getErrorMessage(err) });
     }
   };
 
@@ -72,7 +74,7 @@ export default function NotePostCard({ note, index = 0 }: { note: NoteCard; inde
       await downloadNote(note._id, token, note.originalName);
       registerDownload(note._id);
     } catch (err) {
-      window.alert((err as Error).message);
+      dialog.alert({ title: 'Download failed', message: (err as Error).message });
     } finally {
       setDownloading(false);
     }

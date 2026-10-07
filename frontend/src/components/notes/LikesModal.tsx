@@ -116,7 +116,7 @@ function LikesPage({ noteId, page, isLast, onMore, onNavigate }: LikesPageProps)
                 </span>
               </span>
             </Link>
-            {!u.isMe && <FollowButton userId={u._id} isFollowing={u.isFollowing} compact />}
+            {!u.isMe && <FollowButton userId={u._id} isFollowing={u.isFollowing} name={u.fullName} compact />}
           </li>
         ))}
       </ul>
